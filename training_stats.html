@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OcheMaster - Analytics Hub</title>
+    <style>
+        :root {
+            --hub-bg: #0a0c10;
+            --accent: #05c46b;
+            --secondary: #1c1f26; 
+            --card-hover: #252a34;
+            --stat-color: #00d2ff; /* Blaue Akzentfarbe für Statistiken */
+        }
+
+        body {
+            background: var(--hub-bg);
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+            display: block;
+            overflow-y: auto;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .training-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin: 0;
+            color: var(--stat-color);
+            text-shadow: 0 0 20px rgba(0, 210, 255, 0.4);
+            font-weight: 900;
+        }
+
+        header p {
+            opacity: 0.5;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        .training-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 25px;
+        }
+
+        .training-card {
+            background: var(--secondary);
+            aspect-ratio: 1 / 1;
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .training-card:hover {
+            transform: translateY(-12px);
+            border-color: var(--stat-color);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(0, 210, 255, 0.2);
+            background: var(--card-hover);
+        }
+
+        .icon-box {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            line-height: 1;
+            display: block;
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+        }
+
+        .training-card h2 {
+            font-size: 1.3rem;
+            margin: 5px 0;
+            font-weight: 800;
+            color: white;
+            letter-spacing: 0.5px;
+        }
+
+        .training-card .meta-info {
+            font-size: 0.75rem;
+            color: var(--stat-color);
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-top: 5px;
+        }
+
+        .btn-exit {
+            margin-top: 60px;
+            display: inline-block;
+            padding: 15px 40px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-exit:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        @media (max-width: 500px) {
+            .training-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .training-card { padding: 15px; border-radius: 20px; }
+            .icon-box { font-size: 2.5rem; }
+            .training-card h2 { font-size: 1rem; }
+            header h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="training-wrapper">
+        <header>
+            <h1>Analytics Hub</h1>
+            <p>Deine Fortschritte im Detail</p>
+        </header>
+
+        <div class="training-grid">
+            <a href="stats_atc.html" class="training-card">
+                <span class="icon-box">&#x1F3AF;</span>
+                <h2>ATC Stats</h2>
+                <span class="meta-info">Precision</span>
+            </a>
+
+            <a href="stats_cricket.html" class="training-card">
+                <span class="icon-box">&#x1F3CF;</span>
+                <h2>Cricket Stats</h2>
+                <span class="meta-info">MPR Trend</span>
+            </a>
+
+            <a href="stats_jdc.html" class="training-card">
+                <span class="icon-box">&#x1F393;</span>
+                <h2>JDC Stats</h2>
+                <span class="meta-info">Score History</span>
+            </a>
+
+            <a href="stats_121.html" class="training-card">
+                <span class="icon-box">&#x1F525;</span>
+                <h2>121 Stats</h2>
+                <span class="meta-info">Checkout Rate</span>
+            </a>
+
+            <a href="stats_catch40.html" class="training-card">
+                <span class="icon-box">&#x1F3F9;</span>
+                <h2>Catch 40</h2>
+                <span class="meta-info">Path Analysis</span>
+            </a>
+
+            <a href="stats_ bobs.html" class="training-card">
+                <span class="icon-box">&#x2696;&#xFE0F;</span>
+                <h2>Bob's 27</h2>
+                <span class="meta-info">Double Accuracy</span>
+            </a>
+
+            <a href="stats_hiscore.html" class="training-card">
+                <span class="icon-box">&#x1F680;</span>
+                <h2>HiScore</h2>
+                <span class="meta-info">Scoring Power</span>
+            </a>
+
+            <a href="stats_a1.html" class="training-card">
+                <span class="icon-box">&#x1F4CB;</span>
+                <h2>A1 Drill</h2>
+                <span class="meta-info">Deep Analysis</span>
+            </a>
+        </div>
+
+        <div style="text-align: center;">
+             <a href="training_hub.html" class="btn-exit">ZURÜCK ZUM TRAINING</a>
+        </div>
+    </div>
+
+</body>
+</html>

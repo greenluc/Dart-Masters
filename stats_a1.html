@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A1 Analyse - OcheMaster</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0c10; --card: #1c1f26; --accent: #00d2ff; 
+            --success: #05c46b; --warning: #ffa502; --danger: #ff4757;
+        }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 10px; }
+        .back-btn { text-decoration: none; color: var(--accent); font-weight: bold; font-size: 0.8rem; border: 1px solid var(--accent); padding: 5px 15px; border-radius: 20px; }
+
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 0.75rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 15px 0; letter-spacing: 1.5px; }
+        
+        .big-val { font-size: 2.8rem; font-weight: 900; line-height: 1; }
+        .chart-container { position: relative; height: 220px; width: 100%; }
+        
+        .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .stat-box { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 12px; text-align: center; }
+        .stat-box label { display: block; font-size: 0.6rem; opacity: 0.5; text-transform: uppercase; }
+        .stat-box b { font-size: 1rem; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <a href="training_stats.html" class="back-btn">← HUB</a>
+        <div style="text-align: right;">
+            <div id="latest-pct" class="big-val">0%</div>
+            <div style="font-size: 0.6rem; opacity: 0.5; text-transform: uppercase;">Letzte Quote</div>
+        </div>
+    </header>
+
+    <div class="card">
+        <h2>Aufnahmen-Qualität</h2>
+        <div class="chart-container" style="height: 180px;">
+            <canvas id="distChart"></canvas>
+        </div>
+        <div class="stats-row">
+            <div class="stat-box"><label>Darts Total</label><b id="total-darts">0</b></div>
+            <div class="stat-box"><label>Treffer Total</label><b id="total-hits">0</b></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Segment-Effizienz</h2>
+        <div class="chart-container">
+            <canvas id="radarChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Entwicklung</h2>
+        <div class="chart-container" style="height: 150px;">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storage = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+    const history = storage.a1drill_fs || [];
+
+    if (history.length > 0) {
+        const latest = history[history.length - 1];
+        
+        document.getElementById('latest-pct').innerText = latest.hitPct + "%";
+        document.getElementById('total-darts').innerText = latest.totalDarts;
+        document.getElementById('total-hits').innerText = latest.totalHits;
+
+        // 1. Balkendiagramm für die Verteilung
+        const dist = latest.details.distribution;
+        new Chart(document.getElementById('distChart'), {
+            type: 'bar',
+            data: {
+                labels: ['0 Treffer', '1 Treffer', '2 Treffer', '3 Treffer'],
+                datasets: [{
+                    data: [dist[0], dist[1], dist[2], dist[3]],
+                    backgroundColor: ['#ff4757', '#3d4656', '#ffa502', '#05c46b'],
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, ticks: { color: 'rgba(255,255,255,0.5)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: 'white' } }
+                }
+            }
+        });
+
+        // 2. Radar Chart
+        const segDarts = latest.details.segmentDarts;
+        const radarLabels = Object.keys(segDarts);
+        // Wir nehmen 60 als Basis, da Bull oft mehr Darts braucht
+        const radarData = radarLabels.map(key => Math.max(0, 60 - segDarts[key]));
+
+        new Chart(document.getElementById('radarChart'), {
+            type: 'radar',
+            data: {
+                labels: radarLabels,
+                datasets: [{
+                    data: radarData,
+                    backgroundColor: 'rgba(0, 210, 255, 0.2)',
+                    borderColor: '#00d2ff',
+                    borderWidth: 2,
+                    pointRadius: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        min: 0,
+                        max: 45, // 60 - 15 (perfekt) = 45
+                        ticks: { display: false },
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        angleLines: { color: 'rgba(255,255,255,0.1)' },
+                        pointLabels: { color: 'white' }
+                    }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+
+        // 3. Trend
+        new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: history.map((_, i) => i + 1),
+                datasets: [{
+                    data: history.map(h => parseFloat(h.hitPct)),
+                    borderColor: '#05c46b',
+                    backgroundColor: 'rgba(5, 196, 107, 0.1)',
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

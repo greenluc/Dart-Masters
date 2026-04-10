@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>A1 Drill Pro - Flightschool</title>
+    <style>
+        :root { --accent: #05c46b; --secondary: #1c1f26; --danger: #ff4757; --multiplier: #ffa502; }
+        body { background: #0a0c10; font-family: 'Segoe UI', sans-serif; color: white; margin: 0; overflow: hidden; }
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; position: relative; height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
+        
+        .btn-close { position: absolute; top: 15px; right: 15px; width: 35px; height: 35px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: white; border: 1px solid rgba(255,255,255,0.1); z-index: 100; }
+
+        .header-title { margin-top: 10px; font-size: 1.2rem; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 900; }
+        
+        .target-box { background: var(--secondary); border-radius: 20px; padding: 15px; margin: 10px 0; border: 1px solid var(--accent); min-height: 100px; display: flex; flex-direction: column; justify-content: center; }
+        .target-num { font-size: 4rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        .target-label { font-size: 0.7rem; opacity: 0.5; text-transform: uppercase; margin-top: 5px; }
+
+        .score-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+        .score-tile { background: #1c1f26; padding: 8px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.8rem; transition: 0.3s; position: relative; }
+        .score-tile.completed { border-color: var(--accent); background: rgba(5, 196, 107, 0.1); opacity: 0.6; }
+        .score-tile.active { border-color: var(--multiplier); box-shadow: 0 0 10px rgba(255, 165, 2, 0.3); }
+        .score-tile b { display: block; font-size: 1.1rem; color: var(--accent); }
+        .drill-badge { font-size: 0.65rem; opacity: 0.7; }
+
+        .input-area { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: auto; padding-bottom: 20px; }
+        .btn-action { background: #252a34; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 25px 10px; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.1rem; transition: 0.1s; }
+        .btn-action:active { transform: scale(0.95); background: #3d4656; }
+        .btn-hit { border-bottom: 4px solid var(--accent); }
+
+        #finish-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 4000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-card { background: var(--secondary); padding: 30px; border-radius: 30px; text-align: center; width: 85%; border: 1px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="training_hub.html" class="btn-close">✕</a>
+        <div class="header-title">A1 Drill Pro</div>
+
+        <div class="target-box">
+            <div id="ui-target" class="target-num">13</div>
+            <div class="target-label">Aktuelles Ziel (Round Robin)</div>
+        </div>
+
+        <div class="score-board" id="ui-board"></div>
+
+        <div style="margin: 10px 0;">
+            <div id="ui-stats" style="font-size: 0.8rem; opacity: 0.6;">Darts: 0 | Treffer: 0</div>
+        </div>
+
+        <div class="input-area">
+            <button class="btn-action" onclick="recordDarts(0)">0 Treffer</button>
+            <button class="btn-action" onclick="recordDarts(1)">1 Treffer</button>
+            <button class="btn-action btn-hit" onclick="recordDarts(2)">2 Treffer</button>
+            <button class="btn-action btn-hit" onclick="recordDarts(3)">3 Treffer</button>
+            <button style="grid-column: span 2; background: none; border: none; color: var(--danger); font-size: 0.8rem; font-weight: bold; padding: 10px;" onclick="undo()">RÜCKGÄNGIG</button>
+        </div>
+    </div>
+
+    <div id="finish-modal">
+        <div class="modal-card">
+            <h2 style="color:var(--accent); margin:0;">ABGESCHLOSSEN</h2>
+            <div id="final-pct" style="font-size: 3.5rem; font-weight: 900; margin: 15px 0; color: white;">0%</div>
+            <div id="final-details" style="font-size: 0.9rem; opacity: 0.7; margin-bottom: 25px;"></div>
+            <button onclick="window.location.href='training_hub.html'" class="btn-action" style="width:100%; background:var(--accent); color:black; font-weight:900;">SPEICHERN</button>
+        </div>
+    </div>
+
+    <script>
+        const targets = [13, 14, 15, 16, 17, 18, 19, 20, "BULL"];
+        let data = {
+            hits: { 13:0, 14:0, 15:0, 16:0, 17:0, 18:0, 19:0, 20:0, "BULL":0 },
+            drillHits: { 13:0, 14:0, 15:0, 16:0, 17:0, 18:0, 19:0, 20:0, "BULL":0 },
+            dartsPerSegment: { 13:0, 14:0, 15:0, 16:0, 17:0, 18:0, 19:0, 20:0, "BULL":0 },
+            scoreDistribution: { 0:0, 1:0, 2:0, 3:0 }, // Neu: Verteilung der Aufnahmen
+            totalDarts: 0,
+            totalHits: 0
+        };
+        let currentIdx = 0;
+        let history = [];
+
+        function initBoard() {
+            const board = document.getElementById('ui-board');
+            board.innerHTML = '';
+            targets.forEach(t => {
+                const div = document.createElement('div');
+                div.className = 'score-tile';
+                div.id = `tile-${t}`;
+                div.innerHTML = `<b>${t}</b><span class="drill-badge" id="drill-${t}">0/5</span>`;
+                board.appendChild(div);
+            });
+        }
+
+        function recordDarts(hitCount) {
+            history.push(JSON.parse(JSON.stringify({ data, currentIdx })));
+
+            const currentVal = targets[currentIdx];
+            data.totalDarts += 3;
+            data.totalHits += hitCount;
+            data.hits[currentVal] += hitCount;
+            data.dartsPerSegment[currentVal] += 3;
+            data.scoreDistribution[hitCount]++; // Verteilung tracken
+
+            if (hitCount >= 2) {
+                data.drillHits[currentVal]++;
+            }
+
+            findNextTarget();
+            
+            if (currentIdx === -1) {
+                showResults();
+            } else {
+                updateUI();
+            }
+        }
+
+        function findNextTarget() {
+            let startIdx = currentIdx;
+            for (let i = 1; i <= targets.length; i++) {
+                let next = (startIdx + i) % targets.length;
+                if (data.drillHits[targets[next]] < 5) {
+                    currentIdx = next;
+                    return;
+                }
+            }
+            currentIdx = -1;
+        }
+
+        function undo() {
+            if (history.length > 0) {
+                const last = history.pop();
+                data = last.data;
+                currentIdx = last.currentIdx;
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            if(currentIdx !== -1) {
+                document.getElementById('ui-target').innerText = targets[currentIdx];
+            }
+            document.getElementById('ui-stats').innerText = `Darts: ${data.totalDarts} | Treffer: ${data.totalHits}`;
+            
+            targets.forEach(t => {
+                const tile = document.getElementById(`tile-${t}`);
+                const badge = document.getElementById(`drill-${t}`);
+                badge.innerText = `${data.drillHits[t]}/5`;
+                
+                tile.classList.remove('active', 'completed');
+                if (data.drillHits[t] >= 5) tile.classList.add('completed');
+                if (currentIdx !== -1 && targets[currentIdx] === t) tile.classList.add('active');
+            });
+        }
+
+        function showResults() {
+            const pct = ((data.totalHits / data.totalDarts) * 100).toFixed(1);
+            document.getElementById('final-pct').innerText = pct + "%";
+            document.getElementById('final-details').innerHTML = `
+                Darts: ${data.totalDarts}<br>
+                Treffer: ${data.totalHits}<br>
+                Ø Treffer: ${(data.totalHits / (data.totalDarts/3)).toFixed(2)}
+            `;
+
+            let stats = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+            if(!stats.a1drill_fs) stats.a1drill_fs = [];
+            
+            stats.a1drill_fs.push({
+                date: new Date().toISOString(),
+                totalDarts: data.totalDarts,
+                totalHits: data.totalHits,
+                hitPct: pct,
+                details: {
+                    distribution: data.scoreDistribution,
+                    segmentDarts: data.dartsPerSegment
+                }
+            });
+            
+            localStorage.setItem('dart_training_stats', JSON.stringify(stats));
+            document.getElementById('finish-modal').style.display = 'flex';
+        }
+
+        initBoard();
+        updateUI();
+    </script>
+</body>
+</html>

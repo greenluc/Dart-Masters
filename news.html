@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDC Media Hub</title>
+    <style>
+        :root {
+            --bg: #0f1116;
+            --card: #1c1f26;
+            --accent: #2ecc71;
+            --pdc-blue: #3498db;
+            --text: #e1e1e1;
+        }
+
+        body {
+            margin: 0; background: var(--bg); color: var(--text);
+            font-family: 'Inter', sans-serif; display: flex; height: 100vh;
+        }
+
+        /* Sidebar Platzhalter */
+        #sidebar-container { width: 80px; background: #000; }
+
+        .app-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* NAVIGATION OBEN */
+        .app-nav {
+            display: flex; justify-content: center; gap: 20px;
+            padding: 15px; background: #16191f; border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .nav-btn {
+            background: none; border: none; color: gray; font-weight: bold;
+            padding: 10px 20px; cursor: pointer; transition: 0.3s; border-radius: 8px;
+        }
+        .nav-btn.active { color: white; background: rgba(255,255,255,0.05); border-bottom: 2px solid var(--accent); }
+
+        .content-area { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; }
+        .page { display: none; width: 100%; max-width: 700px; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* STYLE: SOCIAL */
+        .post { background: var(--card); margin-bottom: 15px; padding: 20px; border-radius: 15px; }
+        
+        /* STYLE: MAGAZIN */
+        .mag-article { background: white; color: black; border-radius: 5px; padding: 30px; margin-bottom: 20px; box-shadow: 10px 10px 0px var(--pdc-blue); }
+        .mag-headline { font-family: 'Impact', sans-serif; font-size: 2.5rem; text-transform: uppercase; line-height: 1; margin-bottom: 10px; }
+
+        /* STYLE: STATS */
+        .stat-row { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-container"></div>
+
+    <div class="app-container">
+        <nav class="app-nav">
+            <button class="nav-btn active" onclick="showPage('social', this)">📱 Social Feed</button>
+            <button class="nav-btn" onclick="showPage('magazin', this)">📰 Magazin</button>
+            <button class="nav-btn" onclick="showPage('stats', this)">📊 Daten-Ticker</button>
+        </nav>
+
+        <div class="content-area">
+            <div id="social" class="page active">
+                <div id="social-feed"></div>
+            </div>
+
+            <div id="magazin" class="page">
+                <div id="mag-content"></div>
+            </div>
+
+            <div id="stats" class="page">
+                <div class="post">
+                    <h3 style="color:var(--accent)">Turnier-Analyse</h3>
+                    <div id="stats-content"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidebar_config.js"></script>
+    <script>
+        window.onload = () => {
+            if (typeof injectSidebar === "function") injectSidebar();
+            loadAllData();
+        };
+
+        function showPage(pageId, btn) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(pageId).classList.add('active');
+            btn.classList.add('active');
+        }
+
+        function loadAllData() {
+            const archive = JSON.parse(localStorage.getItem('tournament_archive') || "[]");
+            const player = JSON.parse(localStorage.getItem('career_player'));
+            if(!archive.length) return;
+
+            const last = archive[archive.length - 1];
+            const isWinner = last.res === "Sieg";
+
+            // --- SOCIAL GENERATOR ---
+            document.getElementById('social-feed').innerHTML = `
+                <div class="post"><strong>@PDC_Results:</strong> ${isWinner ? '🏆 CHAMPION!' : '❌ OUT!'} ${player.name} beendet die ${last.tournament}.</div>
+                <div class="post"><strong>@FanBaseDarts:</strong> Was für ein Match! Die Atmosphäre war elektrisierend. #Darts</div>
+            `;
+
+            // --- MAGAZIN GENERATOR ---
+            document.getElementById('mag-content').innerHTML = `
+                <div class="mag-article">
+                    <div style="color:red; font-weight:bold;">BREAKING NEWS</div>
+                    <div class="mag-headline">${isWinner ? 'DER GIGANT VON ' + last.tournament : 'DRAMA IN DER FINAL-NACHT'}</div>
+                    <p>${player.name} sorgt für Schlagzeilen. Lesen Sie die exklusive Analyse über den Aufstieg des neuen Stars...</p>
+                </div>
+            `;
+
+            // --- STATS GENERATOR ---
+            document.getElementById('stats-content').innerHTML = `
+                <div class="stat-row"><span>Average</span> <span>${last.p1.avg}</span></div>
+                <div class="stat-row"><span>Doppel-Quote</span> <span>${Math.floor(Math.random()*20 + 30)}%</span></div>
+                <div class="stat-row"><span>High Finish</span> <span>${last.p1.highFinish || '121'}</span></div>
+            `;
+        }
+    </script>
+</body>
+</html>

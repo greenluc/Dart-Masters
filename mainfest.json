@@ -1,0 +1,21 @@
+{
+  "name": "Dart Master Pro",
+  "short_name": "DartMaster",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#010101",
+  "theme_color": "#00ff88",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "https://via.placeholder.com/192x192/010101/00ff88?text=DM",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://via.placeholder.com/512x512/010101/00ff88?text=DartMaster",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

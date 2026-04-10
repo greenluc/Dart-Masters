@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDC Saison - Timeline</title>
+    <style>
+        :root {
+            --sidebar-width: 80px;
+            --accent: #2ecc71;
+            --bg: #0f1116;
+            --card-bg: #1c1f26;
+            --modal-bg: #16191f;
+            --major: #f1c40f;
+            --euro: #3498db;
+            --pro: #95a5a6;
+            --text-gray: rgba(255,255,255,0.5);
+        }
+
+        body {
+            margin: 0; background: var(--bg); color: white;
+            font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden;
+        }
+
+        /* --- SIDEBAR STYLES (Synchronisiert) --- */
+        .sidebar {
+            width: var(--sidebar-width); background: #07080a;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px 0; border-right: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
+            height: 100%;
+        }
+        .nav-icon {
+            width: 50px; height: 50px; margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 12px; cursor: pointer; transition: 0.3s;
+            background: rgba(255,255,255,0.03); text-decoration: none; 
+            color: white; font-size: 1.2rem;
+        }
+        .nav-icon:hover, .nav-icon.active { 
+            background: var(--accent); color: #000; 
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+        }
+
+
+        /* --- TIMELINE --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; padding-top: 40px; }
+        
+        .timeline-wrapper {
+            flex: 1; display: flex; align-items: center; overflow-x: auto;
+            padding: 0 150px; scroll-behavior: smooth; position: relative;
+            scrollbar-width: none;
+        }
+        .timeline-wrapper::-webkit-scrollbar { display: none; }
+
+        .timeline-wrapper::before {
+            content: ""; position: absolute; left: 0; right: 0; height: 2px;
+            background: rgba(255,255,255,0.05); top: 50%; z-index: 0;
+        }
+
+        .timeline-item { position: relative; min-width: 300px; display: flex; flex-direction: column; align-items: center; z-index: 1; }
+        
+        .dot {
+            width: 14px; height: 14px; background: #333; border-radius: 50%;
+            margin: 25px 0; border: 3px solid var(--bg); transition: 0.3s;
+        }
+
+        .event-card {
+            background: var(--card-bg); border-radius: 20px; padding: 22px; width: 240px;
+            border: 1px solid rgba(255,255,255,0.05); transition: 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer; text-align: center;
+        }
+
+        .timeline-item:nth-child(even) .event-card { order: -1; margin-bottom: 10px; }
+        .timeline-item:nth-child(odd) .event-card { order: 1; margin-top: 10px; }
+
+        .timeline-item:hover .event-card { transform: scale(1.05); border-color: var(--accent); }
+        .timeline-item:hover .dot { background: var(--accent); box-shadow: 0 0 15px var(--accent); }
+
+        .completed { opacity: 0.35; }
+        .completed .dot { background: var(--accent); opacity: 0.5; }
+
+        .current-marker .dot { 
+            background: var(--accent); 
+            box-shadow: 0 0 20px var(--accent); 
+            width: 18px; height: 18px; 
+            border-color: white;
+        }
+        .current-marker .event-card {
+            border: 2px solid var(--accent);
+            box-shadow: 0 10px 30px rgba(46, 204, 113, 0.1);
+            transform: scale(1.1);
+        }
+
+        /* --- MODAL --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.92); display: none; z-index: 1000;
+            justify-content: center; align-items: center; backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background: var(--modal-bg); width: 500px; padding: 35px; border-radius: 28px;
+            border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+        .breakdown-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; max-height: 300px; overflow-y: auto; padding-right: 5px; }
+        .breakdown-item { 
+            background: rgba(255,255,255,0.03); padding: 12px; border-radius: 12px;
+            display: flex; justify-content: space-between; font-size: 0.8rem;
+        }
+        .close-btn {
+            background: var(--accent); color: black; border: none; padding: 15px;
+            border-radius: 15px; font-weight: 900; cursor: pointer; margin-top: 30px; 
+            width: 100%; text-transform: uppercase; letter-spacing: 1px; transition: 0.2s;
+        }
+        .close-btn:hover { opacity: 0.8; transform: translateY(-2px); }
+
+        h1 { margin:0; font-size: 2.5rem; letter-spacing: -1.5px; font-weight: 900; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-container"></div>
+
+    <div class="main-content">
+        <header style="padding-left: 60px;">
+            <h1>Tour Kalender</h1>
+            <p style="color: var(--accent); font-weight: bold; letter-spacing: 2px; font-size: 0.8rem; margin-top: 5px;">PRO TOUR & MAJORS 2026</p>
+        </header>
+
+        <div class="timeline-wrapper" id="timeline"></div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div id="modalBody"></div>
+            <button class="close-btn" onclick="closeModal()">Verstanden</button>
+        </div>
+    </div>
+
+    <script src="sidebar_config.js"></script>
+    <script src="career_data.js"></script>
+    <script>
+        window.onload = () => {
+            if (typeof injectSidebar === "function") injectSidebar();
+            renderTimeline();
+        };
+
+        function renderTimeline() {
+            const container = document.getElementById('timeline');
+            // Nutze die Daten aus deiner career_data.js
+            const events = PDC_TOUR_DATA.calendar;
+            // Nutze deinen neuen Index-Namen
+            const currentIndex = parseInt(localStorage.getItem('pdc_career_index') || "0");
+
+            events.forEach((event, index) => {
+                const isCompleted = index < currentIndex;
+                const isCurrent = index === currentIndex;
+
+                const item = document.createElement('div');
+                item.className = `timeline-item ${isCompleted ? 'completed' : ''} ${isCurrent ? 'current-marker' : ''}`;
+                
+                let typeColor = 'var(--pro)';
+                if(event.type === 'Major') typeColor = 'var(--major)';
+                if(event.type === 'EuroTour') typeColor = 'var(--euro)';
+
+                item.innerHTML = `
+                    <div class="event-card" onclick="showDetails(${index})">
+                        <span style="color:${typeColor}; font-size:0.65rem; font-weight:900; letter-spacing:1px; text-transform:uppercase;">${event.type}</span>
+                        <div style="font-weight:800; margin:10px 0; height:40px; line-height:1.2; display:flex; align-items:center; justify-content:center;">${event.name}</div>
+                        <div style="color:var(--accent); font-size:0.8rem; font-weight:bold; opacity: 0.8;">${event.location || 'PDC Tour'}</div>
+                    </div>
+                    <div class="dot"></div>
+                `;
+                container.appendChild(item);
+            });
+
+            // Auto-Scroll zum aktuellen Turnier
+            if(currentIndex >= 0) {
+                setTimeout(() => { 
+                    const scrollPos = (currentIndex * 300) - (window.innerWidth / 2) + 150 + 80;
+                    container.scrollLeft = scrollPos; 
+                }, 400);
+            }
+        }
+
+        function showDetails(idx) {
+            const event = PDC_TOUR_DATA.calendar[idx];
+            const body = document.getElementById('modalBody');
+            
+            // Preisgeld-Logik basierend auf deiner career_data.js
+            const breakdownKey = event.breakdown || "ProTour";
+            const breakdown = PDC_TOUR_DATA.breakdowns[breakdownKey];
+
+            let breakdownHTML = "";
+            if(breakdown) {
+                // Wir sortieren die Runden nach Preisgeld absteigend
+                const sortedRounds = Object.entries(breakdown).sort((a,b) => b[1] - a[1]);
+                sortedRounds.forEach(([round, prize]) => {
+                    let label = round.replace('r', 'Runde ').replace('qf', 'Viertelfinale').replace('semi', 'Halbfinale').replace('runnerUp', 'Finale (2.)').replace('winner', 'SIEG');
+                    breakdownHTML += `
+                        <div class="breakdown-item">
+                            <span style="text-transform:uppercase; font-weight:bold; opacity:0.6;">${label}</span>
+                            <span style="color:var(--major); font-weight:bold;">£${prize.toLocaleString()}</span>
+                        </div>`;
+                });
+            }
+
+            const unit = (event.format === "World_Championship" || event.format === "World_Grand_Prix") ? "Sets" : "Legs";
+
+            body.innerHTML = `
+                <div style="text-align:center; margin-bottom:25px;">
+                    <span style="color:var(--accent); font-weight:bold; letter-spacing:2px; font-size:0.7rem; text-transform:uppercase;">Turnier Details</span>
+                    <h2 style="margin:5px 0; color:white; font-size:2rem; letter-spacing:-1px;">${event.name}</h2>
+                    <div style="opacity:0.5; font-size:0.9rem;">${event.location} | Feld: ${event.req}</div>
+                </div>
+                
+                <div style="background:rgba(255,255,255,0.05); padding:15px; border-radius:15px; margin-bottom:25px; display:grid; grid-template-columns: 1fr 1fr; gap:15px; text-align:center;">
+                    <div>
+                        <div style="font-size:0.6rem; text-transform:uppercase; opacity:0.5;">Format</div>
+                        <div style="font-weight:bold;">Best of ${event.bo} ${unit}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:0.6rem; text-transform:uppercase; opacity:0.5;">Typ</div>
+                        <div style="font-weight:bold; color:var(--accent);">${event.type}</div>
+                    </div>
+                </div>
+
+                <h4 style="margin:0 0 15px 0; text-transform:uppercase; letter-spacing:1px; font-size:0.7rem; color:var(--text-gray);">Preisgeld-Verteilung</h4>
+                <div class="breakdown-grid">${breakdownHTML}</div>
+            `;
+            document.getElementById('modalOverlay').style.display = 'flex';
+        }
+
+        function closeModal() { document.getElementById('modalOverlay').style.display = 'none'; }
+    </script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HiScore Analyse - OcheMaster</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0c10; --card: #1c1f26; --accent: #686de0; /* Lila/Blau für Power-Scoring */
+            --green: #05c46b; --gold: #ffa502; --red: #ff4757;
+        }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { text-decoration: none; color: #00d2ff; font-weight: bold; border: 1px solid #00d2ff; padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 0.75rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 15px 0; letter-spacing: 1.5px; }
+        
+        .big-val { font-size: 3.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        
+        .score-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 20px 0; }
+        .score-box { background: rgba(0,0,0,0.2); padding: 15px 5px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.03); }
+        .score-box label { display: block; font-size: 0.6rem; opacity: 0.5; margin-bottom: 5px; }
+        .score-box b { font-size: 1.2rem; display: block; }
+        
+        .chart-container { position: relative; height: 200px; width: 100%; }
+        .highlight-180 { border-color: var(--gold) !important; box-shadow: 0 0 15px rgba(255, 165, 2, 0.2); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <a href="training_stats.html" class="back-btn">← ANALYTICS</a>
+        <div style="text-align: right;">
+            <div style="font-size: 0.6rem; opacity: 0.5;">BEST SCORE</div>
+            <div id="pb-score" style="font-size: 1.5rem; font-weight: 900; color: var(--gold);">0</div>
+        </div>
+    </header>
+
+    <div class="card" style="text-align: center;">
+        <h2>Letzte Session PPR (3 Darts)</h2>
+        <div id="current-ppr" class="big-val">0.0</div>
+        
+        <div class="score-grid">
+            <div class="score-box"><label>60+</label><b id="s60">0</b></div>
+            <div class="score-box"><label>100+</label><b id="s100">0</b></div>
+            <div class="score-box"><label>140+</label><b id="s140">0</b></div>
+            <div class="score-box highlight-180"><label>180</label><b id="s180" style="color:var(--gold);">0</b></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>PPR Verlauf & Beständigkeit</h2>
+        <div class="chart-container">
+            <canvas id="pprTrendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Gesamt-Treffer Verteilung</h2>
+        <div class="chart-container">
+            <canvas id="distributionChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storage = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+    const history = storage.hiscore || [];
+
+    if (history.length > 0) {
+        const latest = history[history.length - 1];
+        const allPpr = history.map(h => parseFloat(h.ppr || 0));
+        const allScores = history.map(h => parseInt(h.score || 0));
+
+        // Header & Highlights
+        document.getElementById('current-ppr').innerText = latest.ppr || "0.0";
+        document.getElementById('pb-score').innerText = Math.max(...allScores);
+        
+        // Letzte Session Details
+        document.getElementById('s60').innerText = latest.s60 || 0;
+        document.getElementById('s100').innerText = latest.s100 || 0;
+        document.getElementById('s140').innerText = latest.s140 || 0;
+        document.getElementById('s180').innerText = latest.s180 || 0;
+
+        // 1. PPR TREND CHART
+        new Chart(document.getElementById('pprTrendChart'), {
+            type: 'line',
+            data: {
+                labels: history.map((_, i) => i + 1),
+                datasets: [{
+                    label: 'PPR',
+                    data: allPpr,
+                    borderColor: '#686de0',
+                    backgroundColor: 'rgba(104, 109, 224, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } }
+                }
+            }
+        });
+
+        // 2. DISTRIBUTION CHART (Kumuliert über alle Spiele)
+        const total60 = history.reduce((sum, h) => sum + (h.s60 || 0), 0);
+        const total100 = history.reduce((sum, h) => sum + (h.s100 || 0), 0);
+        const total140 = history.reduce((sum, h) => sum + (h.s140 || 0), 0);
+        const total180 = history.reduce((sum, h) => sum + (h.s180 || 0), 0);
+
+        new Chart(document.getElementById('distributionChart'), {
+            type: 'bar',
+            data: {
+                labels: ['60+', '100+', '140+', '180'],
+                datasets: [{
+                    data: [total60, total100, total140, total180],
+                    backgroundColor: ['#4834d4', '#686de0', '#be2edd', '#ffa502'],
+                    borderRadius: 8
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                    x: { ticks: { color: 'white' } }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

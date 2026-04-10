@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Bob's 27 Pro Analysis</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --bg: #0a0c10; --card: #1c1f26; --accent: #ff4757; --success: #05c46b; }
+        body { background: var(--bg); color: white; font-family: sans-serif; padding: 20px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .card { background: var(--card); padding: 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        .full { grid-column: span 2; }
+        h2 { font-size: 0.8rem; opacity: 0.5; text-transform: uppercase; margin-bottom: 20px; }
+        .big-num { font-size: 3rem; font-weight: 900; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+        <h1>Bob's 27 Analysis</h1>
+        <a href="training_stats.html" style="color: #00d2ff; text-decoration: none;">← HUB</a>
+    </div>
+
+    <div class="grid">
+        <div class="card full">
+            <h2>Überlebens-Analyse (Treffer pro Doppel)</h2>
+            <div style="height: 300px;">
+                <canvas id="hitMapChart"></canvas>
+            </div>
+            <p style="font-size: 0.7rem; opacity: 0.5; margin-top: 10px;">
+                Diese Grafik zeigt, bei welchen Doppeln du die meisten Treffer landest. Täler zeigen deine Schwachstellen.
+            </p>
+        </div>
+
+        <div class="card">
+            <h2>Effizienz</h2>
+            <div class="big-num" id="dq-val">0%</div>
+            <div style="opacity: 0.5; font-size: 0.8rem;">REINE DOPPELQUOTE</div>
+        </div>
+
+        <div class="card">
+            <h2>Fortschritt</h2>
+            <div class="big-num" id="pb-val">0</div>
+            <div style="opacity: 0.5; font-size: 0.8rem;">PERSONAL BEST SCORE</div>
+        </div>
+    </div>
+
+<script>
+    const stats = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+    const bobsData = stats.bobs27 || [];
+
+    if (bobsData.length > 0) {
+        const latest = bobsData[bobsData.length - 1];
+        
+        // PB & DQ Update
+        document.getElementById('pb-val').innerText = Math.max(...bobsData.map(d => d.score));
+        const dq = ((latest.totalHits / latest.totalDarts) * 100).toFixed(1);
+        document.getElementById('dq-val').innerText = dq + "%";
+
+        // Hit Map Chart (D1 bis Bull)
+        // Voraussetzung: Dein Spiel speichert ein Array 'hitDetails' mit Treffern pro Segment
+        const labels = ["D1", "D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11", "D12", "D13", "D14", "D15", "D16", "D17", "D18", "D19", "D20", "Bull"];
+        
+        new Chart(document.getElementById('hitMapChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Treffer',
+                    data: latest.hitDetails || Array(21).fill(0), // Dummy-Daten falls Array fehlt
+                    backgroundColor: function(context) {
+                        const val = context.raw;
+                        return val === 0 ? 'rgba(255, 71, 87, 0.3)' : '#05c46b';
+                    },
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1, color: 'rgba(255,255,255,0.5)' } },
+                    x: { ticks: { color: 'white', font: { size: 10 } } }
+                },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+</script>
+</body>
+</html>

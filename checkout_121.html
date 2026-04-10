@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>121 Challenge Pro - OcheMaster</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root { --accent: #05c46b; --secondary: #1c1f26; --danger: #ff4757; --multiplier: #ffa502; }
+        body { background: #0a0c10; font-family: 'Segoe UI', sans-serif; color: white; margin: 0; overflow: hidden; }
+        .container { max-width: 500px; margin: 0 auto; padding: 15px; text-align: center; height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
+        
+        .btn-close { position: absolute; top: 15px; right: 15px; width: 35px; height: 35px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: white; border: 1px solid rgba(255,255,255,0.1); z-index: 100; }
+
+        .header-title { margin-top: 10px; margin-bottom: 5px; font-size: 1.2rem; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 900; }
+        .info-bar { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; }
+        .badge { background: #252a34; padding: 4px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); }
+        
+        .target-display { background: var(--secondary); border-radius: 20px; padding: 15px; border: 2px solid var(--accent); margin-bottom: 10px; }
+        .target-val { font-size: 4.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        .checkout-hint { color: var(--multiplier); font-size: 1.2rem; font-weight: bold; margin-top: 8px; min-height: 1.6rem; }
+
+        .numpad-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-top: auto; padding-bottom: 15px; }
+        .btn { background: #252a34; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px 0; border-radius: 12px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+        .btn:active { background: var(--accent); color: black; }
+        .multi-btn { background: #3d4656; color: var(--multiplier); }
+        .multi-btn.active { background: var(--multiplier); color: black; }
+        .btn-bull { border: 1px solid var(--multiplier); color: var(--multiplier); }
+        .btn-undo { color: var(--danger); font-size: 1.5rem; }
+
+        .dart-status { display: flex; justify-content: center; gap: 8px; margin: 10px 0; }
+        .dart-dot { width: 12px; height: 12px; border-radius: 50%; background: #333; transition: 0.2s; }
+        .dart-dot.used { background: var(--accent); transform: scale(1.1); }
+
+        #finish-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 2000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-content { background: var(--secondary); padding: 30px; border-radius: 25px; width: 85%; border: 1px solid var(--accent); text-align: center; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="training_hub.html" class="btn-close">✕</a>
+        <div class="header-title">121 Challenge Pro</div>
+        <div class="info-bar">
+            <div class="badge" style="color:var(--multiplier)">Level <span id="level-num">121</span></div>
+            <div class="badge">Versuch <span id="round-num">1</span>/10</div>
+        </div>
+        
+        <div class="target-display">
+            <div id="current-rest" class="target-val">121</div>
+            <div id="hint-text" class="checkout-hint">-</div>
+        </div>
+
+        <div class="dart-status" id="dart-rack">
+            <div class="dart-dot"></div><div class="dart-dot"></div><div class="dart-dot"></div>
+            <div class="dart-dot"></div><div class="dart-dot"></div><div class="dart-dot"></div>
+            <div class="dart-dot"></div><div class="dart-dot"></div><div class="dart-dot"></div>
+        </div>
+
+        <div class="numpad-grid" id="num-grid"></div>
+    </div>
+
+    <div id="finish-modal">
+        <div class="modal-content">
+            <h2 style="color:var(--accent); margin:0;">Session Beendet!</h2>
+            <div style="font-size: 3rem; font-weight: 900; margin: 20px 0;" id="final-stats">0/10</div>
+            <p style="opacity:0.7;">Checkouts erfolgreich</p>
+            <p id="highest-level" style="font-weight:bold; color:var(--multiplier);"></p>
+            <button class="btn" style="width:100%; margin-top:20px; background:var(--accent); color:black; font-weight:900;" onclick="window.location.href='training_hub.html'">ZUM HUB</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+    <script>
+        let baseTarget = 121;
+        let currentRest = 121;
+        let dartsThrown = 0;
+        let multiplier = 1;
+        let currentRound = 1;
+        let successfulCheckouts = 0;
+        let history = [];
+        
+        // NEU: Detailliertes Log für Statistik
+        let roundLogs = []; 
+
+        function initGrid() {
+            const grid = document.getElementById('num-grid');
+            const btns = [
+                {t:'D', f:()=>setMulti(2), c:'multi-btn', i:'m2'},
+                {t:'T', f:()=>setMulti(3), c:'multi-btn', i:'m3'},
+                {t:'BULL', f:()=>hit(25), c:'btn-bull'},
+                {t:'0', f:()=>hit(0)},
+                {t:'←', f:()=>undoLast(), c:'btn-undo'}
+            ];
+            btns.forEach(b => grid.appendChild(createBtn(b.t, b.f, b.c, b.i)));
+            for(let i=1; i<=20; i++) grid.appendChild(createBtn(i, () => hit(i)));
+        }
+
+        function createBtn(txt, fn, cls, id) {
+            const b = document.createElement('button');
+            b.className = 'btn ' + (cls || '');
+            if(id) b.id = id;
+            b.innerText = txt;
+            b.onclick = fn;
+            return b;
+        }
+
+        function setMulti(m) {
+            multiplier = (multiplier === m) ? 1 : m;
+            updateUI();
+        }
+
+        function hit(val) {
+            const pts = val * multiplier;
+            if(val === 25 && multiplier === 3) { multiplier = 1; updateUI(); return; }
+            
+            history.push({ rest: currentRest, darts: dartsThrown, mult: multiplier });
+            const isDouble = multiplier === 2 || (val === 25 && multiplier === 2);
+            const wouldBe = currentRest - pts;
+
+            if (wouldBe === 0 && isDouble) {
+                dartsThrown++;
+                successfulCheckouts++;
+                finishRound(true);
+            } else if (wouldBe < 2) {
+                // Bust - Aufnahme beenden (Zählt als 3 Darts in der aktuellen Aufnahme)
+                let taken = 3 - (dartsThrown % 3);
+                dartsThrown += taken;
+                finishRound(false);
+            } else {
+                currentRest = wouldBe;
+                dartsThrown++;
+                if (dartsThrown >= 9) {
+                    finishRound(false);
+                }
+            }
+            multiplier = 1;
+            updateUI();
+        }
+
+        function finishRound(success) {
+            // Logge die Runde
+            roundLogs.push({
+                round: currentRound,
+                target: baseTarget,
+                success: success,
+                dartsUsed: dartsThrown,
+                remaining: success ? 0 : currentRest
+            });
+
+            if (currentRound >= 10) {
+                saveFinalStats();
+                showSummary();
+            } else {
+                if(success) baseTarget++;
+                currentRound++;
+                currentRest = baseTarget;
+                dartsThrown = 0;
+                history = [];
+            }
+        }
+
+        function undoLast() {
+            if(history.length > 0) {
+                const last = history.pop();
+                currentRest = last.rest;
+                dartsThrown = last.darts;
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('current-rest').innerText = currentRest;
+            document.getElementById('level-num').innerText = baseTarget;
+            document.getElementById('round-num').innerText = currentRound;
+            
+            const m2 = document.getElementById('m2');
+            const m3 = document.getElementById('m3');
+            if(m2) m2.classList.toggle('active', multiplier === 2);
+            if(m3) m3.classList.toggle('active', multiplier === 3);
+            
+            if (typeof checkoutTable !== 'undefined') {
+                document.getElementById('hint-text').innerText = checkoutTable[currentRest] || "-";
+            }
+
+            const dots = document.querySelectorAll('.dart-dot');
+            dots.forEach((d, i) => d.className = i < dartsThrown ? 'dart-dot used' : 'dart-dot');
+        }
+
+        function saveFinalStats() {
+            let stats = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+            if(!stats.checkout121) stats.checkout121 = [];
+            
+            stats.checkout121.push({
+                date: new Date().toISOString(),
+                score: successfulCheckouts,
+                maxLevel: baseTarget,
+                total: 10,
+                details: roundLogs // NEU: Der komplette Verlauf
+            });
+            localStorage.setItem('dart_training_stats', JSON.stringify(stats));
+        }
+
+        function showSummary() {
+            document.getElementById('final-stats').innerText = `${successfulCheckouts}/10`;
+            document.getElementById('highest-level').innerText = `End-Level: ${baseTarget}`;
+            document.getElementById('finish-modal').style.display = 'flex';
+        }
+
+        window.onload = () => { initGrid(); updateUI(); };
+    </script>
+</body>
+</html>

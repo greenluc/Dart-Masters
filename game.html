@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dart Master Pro - Ultimate</title>
+    
+    <meta name="theme-color" content="#1e272e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
+    
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* ZusÃ¤tzlicher Style fÃ¼r den Home-Button oben links */
+        .nav-header {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 1000;
+        }
+
+        .btn-hub {
+            background: rgba(30, 41, 59, 0.8);
+            backdrop-filter: blur(5px);
+            color: var(--accent);
+            border: 1px solid var(--accent);
+            padding: 8px 15px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: 0.2s;
+        }
+
+        .btn-hub:active {
+            transform: scale(0.95);
+            background: var(--accent);
+            color: black;
+        }
+        
+       .disabled-grid {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+ 
+    </style>
+</head>
+<body>
+    <div class="nav-header">
+        <button class="btn-hub" onclick="window.location.href='tournament_view.html'">TOUR</button>
+
+    </div>
+
+    <div class="container">
+        <div id="setup-screen" class="screen active">
+            <h1 style="text-align:center; letter-spacing: 2px; color: var(--accent); margin-top: 40px;">DART MASTER PRO</h1>
+            
+            <div class="setup-section">
+                <h3>Spieler Profile</h3>
+                <div class="setup-grid">
+                    <div class="input-group">
+                        <label>Spieler 1</label>
+                        <input type="text" id="p1-name" placeholder="Name Spieler 1">
+                    </div>
+                    <div></div>
+                    <div class="input-group">
+                        <label>Spieler 2</label>
+                        <input type="text" id="p2-name" placeholder="Name Spieler 2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label>Gegner-Typ</label>
+                <select id="p2-type" onchange="toggleBotLevel()">
+                    <option value="human">Mensch</option>
+                    <option value="bot">Computer (KI)</option>
+                </select>
+            </div>
+
+            <div class="input-group" id="bot-level-group" style="display: none;">
+                <label>Bot-Level</label>
+                <select id="bot-difficulty">
+                    <option value="1">Amateur (Avg 35-45)</option>
+                    <option value="2">Fortgeschritten (Avg 55-65)</option>
+                </select>
+            </div>
+
+            <div class="setup-section">
+                <h3>Spielmodus & Out-Regel</h3>
+                <div class="setup-grid">
+                    <div class="input-group">
+                        <label>Start-Punkte</label>
+                        <select id="start-score">
+                            <option value="170">170</option>
+                            <option value="301">301</option>
+                            <option value="501" selected>501</option>
+                            <option value="701">701</option>
+                            <option value="1001">1001</option>
+                        </select>
+                    </div>
+                    <div class="input-group">
+                        <label>Checkout</label>
+                        <select id="out-mode">
+                            <option value="SO">Single Out</option>
+                            <option value="DO" selected>Double Out</option>
+                            <option value="MO">Master Out (T/D)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <h3>Match Distanz</h3>
+                <div class="setup-grid">
+                    <div class="input-group">
+                        <label>SÃ¤tze (Ziel)</label>
+                        <input type="number" id="sets-to-win" value="1" min="1">
+                    </div>
+                    <div></div>
+                    <div class="input-group">
+                        <label>Legs pro Satz</label>
+                        <input type="number" id="legs-per-set" value="3" min="1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="setup-section">
+                <h3>Anwurf</h3>
+                <select id="starting-player" style="width: 100%;">
+                    <option value="0">Spieler 1 beginnt</option>
+                    <option value="1">Spieler 2 beginnt</option>
+                    <option value="random">Zufall</option>
+                </select>
+            </div>
+
+            <button class="btn-ctrl btn-start" onclick="startGame()">Match Starten</button>
+        </div>
+
+<div id="game-screen" class="screen">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <div id="leg-indicator" style="font-size: 0.8rem; opacity: 0.7;">SET 1 | LEG 1</div>
+                <button onclick="showStats()" style="background: transparent; color: var(--accent); border: 1px solid var(--accent); border-radius: 5px; padding: 5px 12px; font-weight: bold;">LIVE STATS</button>
+            </div>
+            
+            <div class="scoreboard">
+                <div id="card-0" class="player-card active">
+                    <span class="badge">DRT</span>
+                    <div id="d-name-0" style="font-weight:bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">P1</div>
+                    <div id="score-0" class="score-display">501</div>
+                    <div id="stats-0" style="color:var(--accent); font-size:0.75rem; margin-bottom: 5px;">Legs: 0 | Sets: 0</div>
+                    <div id="avg-container-0" class="avg-display"></div>
+                </div>
+
+                <div id="card-1" class="player-card">
+                    <span class="badge">DRT</span>
+                    <div id="d-name-1" style="font-weight:bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">P2</div>
+                    <div id="score-1" class="score-display">501</div>
+                    <div id="stats-1" style="color:var(--accent); font-size:0.75rem; margin-bottom: 5px;">Legs: 0 | Sets: 0</div>
+                    <div id="avg-container-1" class="avg-display"></div>
+                </div>
+            </div>
+
+            <div class="history-container">
+                <div id="hist-0" class="history-list"></div>
+                <div id="hist-1" class="history-list"></div>
+            </div>
+
+            <div class="checkout-hint" id="checkout-box">Bereit</div>
+            
+            <div id="num-grid" class="input-grid"></div>
+
+            <div class="controls">
+                <button class="btn-ctrl btn-undo" onclick="undo()">Undo</button>
+                <button class="btn-ctrl btn-reset" onclick="resetMatch()">Reset</button>
+            </div>
+        </div>
+
+        <div id="stats-screen" class="screen">
+            <h2 style="text-align: center; color: var(--accent); margin-top: 0; letter-spacing: 1px;">MATCH ANALYTICS</h2>
+            <div id="stats-render"></div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px;">
+                <button class="btn-ctrl" onclick="closeStats()" style="background: #3d4656;">ZURÃœCK</button>
+                <button class="btn-ctrl btn-start" onclick="window.location.href='index.html'">ZUM HUB</button>
+            </div>
+        </div>
+
+        <div id="checkout-overlay">
+            <div class="co-modal">
+                <h2 style="color: var(--multiplier); margin-top: 0;">CHECKOUT!</h2>
+                <p>Welcher Dart hat getroffen?</p>
+                <div class="co-grid">
+                    <button class="co-btn" onclick="confirmCheckout(1)">1. Dart</button>
+                    <button class="co-btn" onclick="confirmCheckout(2)">2. Dart</button>
+                    <button class="co-btn" onclick="confirmCheckout(3)">3. Dart</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="game.js"></script>
+    <script src="player_db.js"></script>
+<script src="career_data.js"></script>
+<script src="update_OOM.js"></script>
+<script src="career_logic.js"></script>
+</body>
+</html>

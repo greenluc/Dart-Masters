@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cricket Analyse - OcheMaster</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0c10; --card: #1c1f26; --accent: #badc58; 
+            --blue: #00d2ff; --danger: #ff4757; --success: #05c46b;
+        }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { text-decoration: none; color: var(--blue); font-weight: bold; border: 1px solid var(--blue); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 0.75rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 15px 0; letter-spacing: 1.5px; }
+        
+        .big-val { font-size: 3.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        .chart-container { position: relative; height: 300px; width: 100%; }
+
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        .stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; text-align: center; }
+        .stat-box label { display: block; font-size: 0.6rem; opacity: 0.5; text-transform: uppercase; margin-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <a href="training_stats.html" class="back-btn">← HUB</a>
+        <div style="text-align: right;">
+            <div style="font-size: 0.6rem; opacity: 0.5; text-transform: uppercase;">Best MPR</div>
+            <div id="pb-mpr" style="font-size: 1.5rem; font-weight: 900; color: var(--accent);">0.00</div>
+        </div>
+    </header>
+
+    <div class="card" style="text-align: center;">
+        <h2>Darts Effizienz</h2>
+        <div id="efficiency-avg" class="big-val">0%</div>
+        <div class="stat-grid">
+            <div class="stat-box"><label>Gesamt Darts</label><b id="total-darts">0</b></div>
+            <div class="stat-box"><label>Runden</label><b id="total-rounds">0</b></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Präzision pro Segment</h2>
+        <div class="chart-container">
+            <canvas id="efficiencyChart"></canvas>
+        </div>
+        <p style="font-size: 0.65rem; opacity: 0.4; text-align: center; margin-top: 15px;">
+            100% bedeutet: Keine Fehlwürfe auf dieses Feld.<br>
+            Werte unter 100% zeigen an, wie viele Darts du "verschwendet" hast.
+        </p>
+    </div>
+
+    <div class="card">
+        <h2>MPR Trend & Durchschnitt</h2>
+        <div class="chart-container" style="height: 200px;">
+            <canvas id="mprTrendChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storage = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+    const cricketHistory = storage.cricket || [];
+
+    if (cricketHistory.length > 0) {
+        const latest = cricketHistory[cricketHistory.length - 1];
+        const allMpr = cricketHistory.map(h => parseFloat(h.mpr));
+        
+        document.getElementById('total-darts').innerText = latest.darts;
+        document.getElementById('total-rounds').innerText = Math.ceil(latest.darts / 3);
+        document.getElementById('pb-mpr').innerText = Math.max(...allMpr).toFixed(2);
+
+        // --- 1. EFFIZIENZ CHART ---
+        const segments = ["20", "19", "18", "17", "16", "15", "25"];
+        const labels = ["20", "19", "18", "17", "16", "15", "Bull"];
+        
+        const efficiencyData = segments.map(s => {
+            const darts = latest.segmentDetails ? latest.segmentDetails[s] : 0;
+            return darts > 0 ? Math.round((3 / darts) * 100) : 0;
+        });
+
+        const avgEff = Math.round(efficiencyData.reduce((a, b) => a + b, 0) / 7);
+        document.getElementById('efficiency-avg').innerText = avgEff + "%";
+
+        new Chart(document.getElementById('efficiencyChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: efficiencyData,
+                    backgroundColor: efficiencyData.map(v => v >= 100 ? '#05c46b' : (v >= 60 ? '#ffa502' : '#ff4757')),
+                    borderRadius: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        max: 150,
+                        ticks: { color: 'rgba(255,255,255,0.5)', callback: v => v + "%" },
+                        grid: { color: 'rgba(255,255,255,0.05)' }
+                    },
+                    x: { ticks: { color: 'white', font: { weight: 'bold' } } }
+                }
+            }
+        });
+
+        // --- 2. TREND CHART MIT DURCHSCHNITT ---
+        const mprSum = allMpr.reduce((a, b) => a + b, 0);
+        const mprAvg = (mprSum / allMpr.length).toFixed(2);
+
+        new Chart(document.getElementById('mprTrendChart'), {
+            type: 'line',
+            data: {
+                labels: cricketHistory.map((_, i) => i + 1),
+                datasets: [
+                    {
+                        label: 'Spiel MPR',
+                        data: allMpr,
+                        borderColor: '#badc58',
+                        backgroundColor: 'rgba(186, 220, 88, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#badc58'
+                    },
+                    {
+                        label: 'Ø Durchschnitt',
+                        data: Array(allMpr.length).fill(mprAvg),
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                        borderDash: [5, 5],
+                        borderWidth: 2,
+                        pointRadius: 0,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { 
+                        display: true, 
+                        title: { display: true, text: 'Spiele Verlauf', color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
+                        grid: { display: false },
+                        ticks: { color: 'rgba(255,255,255,0.5)' }
+                    },
+                    y: { 
+                        display: true,
+                        title: { display: true, text: 'MPR Wert', color: 'rgba(255,255,255,0.3)', font: { size: 10 } },
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: 'rgba(255,255,255,0.5)', stepSize: 0.5 }
+                    }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDC Stats - Performance</title>
+    <style>
+        :root {
+            --sidebar-width: 80px;
+            --accent: #2ecc71;
+            --bg: #0f1116;
+            --card-bg: #1c1f26;
+            --text-gray: rgba(255,255,255,0.5);
+            --gold: #f1c40f;
+            --danger: #ff4757;
+        }
+
+        body {
+            margin: 0; 
+            background: var(--bg); 
+            color: white;
+            font-family: 'Inter', sans-serif; 
+            display: flex; 
+            height: 100vh; 
+            overflow: hidden;
+        }
+
+        /* --- SIDEBAR STYLES (m�ssen in der HTML bleiben oder in style.css) --- */
+        .sidebar {
+            width: var(--sidebar-width); 
+            background: #07080a;
+            display: flex; 
+            flex-direction: column; 
+            align-items: center;
+            padding: 20px 0; 
+            border-right: 1px solid rgba(255,255,255,0.05); 
+            flex-shrink: 0;
+            height: 100%;
+        }
+
+        .nav-icon {
+            width: 50px; 
+            height: 50px; 
+            margin-bottom: 20px;
+            display: flex; 
+            align-items: center; 
+            justify-content: center;
+            border-radius: 12px; 
+            cursor: pointer; 
+            transition: 0.3s;
+            background: rgba(255,255,255,0.03); 
+            text-decoration: none; 
+            color: white; 
+            font-size: 1.4rem;
+        }
+
+        .nav-icon:hover, .nav-icon.active { 
+            background: var(--accent); 
+            color: #000; 
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4); 
+        }
+
+        /* --- MAIN CONTENT --- */
+        .main-content { 
+            flex: 1; 
+            padding: 40px; 
+            overflow-y: auto; 
+        }
+
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(3, 1fr); 
+            gap: 20px; 
+            margin-bottom: 30px; 
+        }
+
+        .card { 
+            background: var(--card-bg); 
+            border-radius: 20px; 
+            padding: 25px; 
+            border: 1px solid rgba(255,255,255,0.05); 
+            position: relative;
+        }
+
+        .stat-label { 
+            font-size: 0.7rem; 
+            color: var(--text-gray); 
+            text-transform: uppercase; 
+            letter-spacing: 1px; 
+        }
+
+        .stat-value { 
+            font-size: 2.2rem; 
+            font-weight: 900; 
+            display: block; 
+            margin-top: 5px; 
+        }
+
+        .graph-container { 
+            display: flex; 
+            align-items: flex-end; 
+            gap: 6px; 
+            height: 180px; 
+            margin-top: 25px; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 5px;
+        }
+
+        .bar { 
+            flex: 1; 
+            background: var(--accent); 
+            opacity: 0.4; 
+            border-radius: 4px 4px 0 0; 
+            transition: 0.3s; 
+            min-width: 15px;
+        }
+
+        .bar:hover { 
+            opacity: 1; 
+            filter: brightness(1.2); 
+            cursor: help; 
+        }
+
+        .history-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 12px 0; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+        }
+
+        .empty-state { 
+            opacity: 0.3; 
+            font-style: italic; 
+            font-size: 0.8rem; 
+            text-align: center; 
+            padding: 40px 0; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-container"></div>
+
+    <div class="main-content">
+        <header style="margin-bottom: 40px;">
+            <h1 id="p-name" style="margin:0; font-size: 2.6rem; letter-spacing: -1px;">Lade Spieler...</h1>
+            <p style="color: var(--accent); font-weight: bold; letter-spacing: 2px; margin: 5px 0 0 0; font-size: 0.8rem;">PERFORMANCE & FORM-TREND</p>
+        </header>
+
+        <div class="stats-grid">
+            <div class="card">
+                <span class="stat-label">Saison Average</span>
+                <span class="stat-value" id="avg-val">--.-</span>
+            </div>
+            <div class="card">
+                <span class="stat-label">H�chstes Finish</span>
+                <span class="stat-value" id="hf-val" style="color: var(--gold);">---</span>
+            </div>
+            <div class="card">
+                <span class="stat-label">Gespielte Matches</span>
+                <span class="stat-value" id="match-count">0</span>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 20px;">
+            <div class="card">
+                <span class="stat-label">Form-Trend (Letzte 15 Matches)</span>
+                <div class="graph-container" id="trend-graph"></div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.6rem; opacity: 0.4; text-transform: uppercase;">
+                    <span>�lteste</span>
+                    <span>Neueste</span>
+                </div>
+            </div>
+
+            <div class="card">
+                <span class="stat-label">Letzte Ergebnisse</span>
+                <div class="history-list" id="history-list">
+                    <div class="empty-state">Noch keine Spiele absolviert</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="sidebar_config.js"></script>
+    <script src="career_data.js"></script>
+    <script>
+        function initPage() {
+            // 1. Sidebar laden
+            if (typeof injectSidebar === 'function') {
+                injectSidebar();
+            }
+
+            // 2. Statistiken laden
+            loadStats();
+        }
+
+        function loadStats() {
+            const player = JSON.parse(localStorage.getItem('career_player'));
+            const archive = JSON.parse(localStorage.getItem('dart_match_archive') || "[]");
+
+            if(!player) {
+                window.location.href = 'game_501';
+                return;
+            }
+
+            document.getElementById('p-name').innerText = player.name;
+            document.getElementById('match-count').innerText = archive.length;
+
+            // Saison-Average
+            if(archive.length > 0) {
+                const totalAvg = archive.reduce((sum, m) => sum + parseFloat(m.p1.avg), 0) / archive.length;
+                document.getElementById('avg-val').innerText = totalAvg.toFixed(2);
+            } else {
+                document.getElementById('avg-val').innerText = (player.baseAvg || 0).toFixed(2);
+            }
+
+            // Trend Graph
+            const graph = document.getElementById('trend-graph');
+            const last15 = archive.slice(-15);
+            if(last15.length > 0) {
+                graph.innerHTML = ''; 
+                const avgs = last15.map(m => parseFloat(m.p1.avg));
+                const minAvg = Math.min(...avgs) - 5;
+                const maxAvg = Math.max(...avgs) + 5;
+                const range = maxAvg - minAvg;
+
+                last15.forEach(m => {
+                    const bar = document.createElement('div');
+                    bar.className = 'bar';
+                    const heightPercent = ((parseFloat(m.p1.avg) - minAvg) / range * 80) + 20; 
+                    bar.style.height = heightPercent + "%";
+                    bar.title = `${m.tournament || 'Match'}\nAvg: ${m.p1.avg}\nScore: ${m.score}`;
+                    graph.appendChild(bar);
+                });
+            }
+
+            // High Finish
+            const hf = archive.length > 0 ? Math.max(...archive.map(m => m.p1.highFinish || 0)) : 0;
+            document.getElementById('hf-val').innerText = hf > 0 ? hf : "---";
+
+            // Historie
+            const list = document.getElementById('history-list');
+            if(archive.length > 0) {
+                list.innerHTML = '';
+                [...archive].reverse().slice(0, 6).forEach(m => {
+                    const win = m.winner === player.name;
+                    list.innerHTML += `
+                        <div class="history-item">
+                            <div style="display:flex; flex-direction:column;">
+                                <span style="font-weight:bold; font-size:0.9rem;">vs ${m.p2.name}</span>
+                                <span style="font-size:0.7rem; opacity:0.5;">${m.tournament || 'Match'}</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div style="font-weight:900; font-size:1.1rem; color:${win ? 'var(--accent)' : 'var(--danger)'}">${m.score}</div>
+                                <div style="font-size:0.6rem; opacity:0.4;">${m.p1.avg} AVG</div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        window.onload = initPage;
+    </script>
+</body>
+</html>

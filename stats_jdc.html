@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JDC Challenge Stats - OcheMaster</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0c10; --card: #1c1f26; 
+            --accent: #00d2ff; --danger: #ff4757; --gold: #ffa502;
+        }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { text-decoration: none; color: var(--accent); font-weight: bold; border: 1px solid var(--accent); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 0.75rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 15px 0; letter-spacing: 1.5px; }
+        
+        .big-val { font-size: 4rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        
+        .jdc-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; }
+        .jdc-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 15px; text-align: center; border-bottom: 4px solid var(--accent); }
+        .jdc-box label { display: block; font-size: 0.55rem; opacity: 0.5; text-transform: uppercase; margin-bottom: 5px; }
+        .jdc-box b { font-size: 1.1rem; }
+
+        .shirt-badge { display: inline-block; padding: 5px 15px; border-radius: 10px; font-weight: 900; margin-top: 10px; text-transform: uppercase; letter-spacing: 1px; }
+        .chart-container { position: relative; height: 250px; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <a href="training_stats.html" class="back-btn">← ANALYTICS</a>
+        <div style="text-align: right;">
+            <div style="font-size: 0.6rem; opacity: 0.5;">HIGHSCORE</div>
+            <div id="best-score" style="font-size: 1.5rem; font-weight: 900; color: var(--gold);">--</div>
+        </div>
+    </header>
+
+    <div class="card" style="text-align: center;">
+        <h2>Letzter JDC Score</h2>
+        <div id="last-score" class="big-val">0</div>
+        <div id="shirt-tag" class="shirt-badge">White Shirt</div>
+        
+        <div class="jdc-grid">
+            <div class="jdc-box" style="border-color: #ffa502;"><label>Shanghai 1</label><b id="p1-pts">0</b></div>
+            <div class="jdc-box" style="border-color: #05c46b;"><label>Doubles</label><b id="p2-pts">0</b></div>
+            <div class="jdc-box" style="border-color: #ffa502;"><label>Shanghai 2</label><b id="p3-pts">0</b></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Score Trend</h2>
+        <div class="chart-container">
+            <canvas id="jdcTrendChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Punkte-Verteilung (Letzte)</h2>
+        <div class="chart-container">
+            <canvas id="jdcPieChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storage = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+    const history = storage.jdc || [];
+
+    function getShirt(score) {
+        if(score >= 850) return { n: "Black", c: "#2f3542", t: "white" };
+        if(score >= 700) return { n: "Purple", c: "#a55eea", t: "white" };
+        if(score >= 500) return { n: "Red", c: "#ff4757", t: "white" };
+        if(score >= 300) return { n: "Green", c: "#2ed573", t: "black" };
+        if(score >= 200) return { n: "Blue", c: "#45aaf2", t: "white" };
+        if(score >= 100) return { n: "Yellow", c: "#fed330", t: "black" };
+        return { n: "White", c: "#ffffff", t: "black" };
+    }
+
+    if (history.length > 0) {
+        const latest = history[history.length - 1];
+        const det = latest.details;
+
+        document.getElementById('last-score').innerText = latest.score;
+        document.getElementById('p1-pts').innerText = det.part1;
+        document.getElementById('p2-pts').innerText = det.part2;
+        document.getElementById('p3-pts').innerText = det.part3;
+
+        const shirt = getShirt(latest.score);
+        const tag = document.getElementById('shirt-tag');
+        tag.innerText = shirt.n + " Shirt";
+        tag.style.backgroundColor = shirt.color;
+        tag.style.color = shirt.t;
+
+        const allScores = history.map(h => h.score);
+        document.getElementById('best-score').innerText = Math.max(...allScores);
+
+        // Trend Chart
+        new Chart(document.getElementById('jdcTrendChart'), {
+            type: 'line',
+            data: {
+                labels: history.map((_, i) => i + 1),
+                datasets: [{
+                    data: allScores,
+                    borderColor: '#00d2ff',
+                    backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                    x: { display: false }
+                }
+            }
+        });
+
+        // Pie Chart für Verteilung
+        new Chart(document.getElementById('jdcPieChart'), {
+            type: 'doughnut',
+            data: {
+                labels: ['Shanghai 1', 'Doubles', 'Shanghai 2'],
+                datasets: [{
+                    data: [det.part1, det.part2, det.part3],
+                    backgroundColor: ['#ffa502', '#05c46b', '#ff7f50'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { 
+                    legend: { 
+                        position: 'bottom',
+                        labels: { color: 'white', font: { size: 10 } }
+                    } 
+                },
+                cutout: '70%'
+            }
+        });
+    }
+</script>
+</body>
+</html>

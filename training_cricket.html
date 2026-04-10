@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cricket Pro Drill</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        :root {
+            --accent: #05c46b;
+            --secondary: #1c1f26;
+        }
+        body { background: #0a0c10; font-family: 'Segoe UI', sans-serif; color: white; margin: 0; overflow-x: hidden; }
+        
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; position: relative; }
+        
+        /* Das Schlie√üen-X oben rechts */
+        .btn-close {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-decoration: none;
+            color: white;
+            font-size: 1.2rem;
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: 0.2s;
+            z-index: 100;
+        }
+        .btn-close:hover { background: rgba(255, 0, 0, 0.2); border-color: #ff4757; }
+
+        .header-title {
+            margin-top: 10px;
+            margin-bottom: 25px;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+
+        /* Multiplikator-Selector */
+        .multiplier-bar {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.03);
+            padding: 8px;
+            border-radius: 16px;
+        }
+        .m-btn {
+            padding: 14px; border: 1px solid rgba(255,255,255,0.05); border-radius: 12px;
+            background: #16191f; color: white; font-weight: bold; cursor: pointer; transition: 0.2s;
+        }
+        .m-btn.active { 
+            background: var(--accent); color: black; border-color: var(--accent);
+            box-shadow: 0 4px 15px rgba(5, 196, 107, 0.3);
+        }
+
+        .cricket-grid { display: grid; gap: 8px; }
+        .target-row {
+            background: var(--secondary); border-radius: 16px; padding: 14px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid rgba(255,255,255,0.03); transition: 0.2s;
+            cursor: pointer;
+        }
+        .target-row:active { transform: scale(0.98); background: #252a34; }
+        .target-row.closed { opacity: 0.15; filter: grayscale(1); pointer-events: none; }
+        .target-num { font-size: 1.6rem; font-weight: 900; color: var(--accent); width: 50px; text-align: left; }
+
+        .marks { display: flex; gap: 8px; }
+        .circle {
+            width: 28px; height: 28px; border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 0.7rem; font-weight: bold; transition: 0.3s;
+        }
+        .circle.fill { background: var(--accent); border-color: var(--accent); color: black; }
+
+        .stats-bar {
+            margin-top: 20px; display: flex; justify-content: space-around; 
+            background: rgba(255,255,255,0.03); padding: 15px; border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        #finish-modal {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95);
+            backdrop-filter: blur(10px); z-index: 1000; justify-content: center; align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="training_hub.html" class="btn-close">X</a>
+        
+        <div class="header-title">Cricket Pro</div>
+
+        <div class="multiplier-bar">
+            <button class="m-btn active" id="m1" onclick="setMult(1)">SINGLE</button>
+            <button class="m-btn" id="m2" onclick="setMult(2)">DOUBLE</button>
+            <button class="m-btn" id="m3" onclick="setMult(3)">TRIPLE</button>
+        </div>
+
+        <div class="cricket-grid" id="board"></div>
+
+        <div class="stats-bar">
+            <div><small style="display:block; opacity:0.5; font-size:0.6rem; text-transform:uppercase;">Darts</small><b id="darts-total" style="font-size:1.3rem;">0</b></div>
+            <div><small style="display:block; opacity:0.5; font-size:0.6rem; text-transform:uppercase;">MPR</small><b id="mpr-live" style="font-size:1.3rem; color:var(--accent);">0.00</b></div>
+        </div>
+
+        <button onclick="addMiss()" style="width:100%; margin-top:15px; padding:18px; border-radius:16px; background:none; color:rgba(255,255,255,0.4); border:1px solid rgba(255,255,255,0.1); font-weight:bold; cursor:pointer;">MISS (1 DART)</button>
+    </div>
+
+    <div id="finish-modal">
+        <div style="background:var(--secondary); padding:40px 30px; border-radius:30px; text-align:center; width:85%; max-width:400px; border:1px solid var(--accent);">
+            <div style="font-size:3rem; margin-bottom:10px;">üèÜ</div>
+            <h2 style="color:var(--accent); margin:0 0 20px 0; letter-spacing:1px;">FERTIG!</h2>
+            <div id="final-stats" style="margin-bottom:30px; font-size:1.2rem; line-height:1.6;"></div>
+            <button onclick="window.location.href='training_hub.html'" style="width:100%; padding:16px; background:var(--accent); border:none; border-radius:14px; font-weight:900; cursor:pointer; color:black;">STATISTIK SPEICHERN</button>
+        </div>
+    </div>
+
+    <script>
+                const targets = [20, 19, 18, 17, 16, 15, 25];
+        let state = { 20:0, 19:0, 18:0, 17:0, 16:0, 15:0, 25:0 };
+        // NEU: Tracking der Darts pro Segment
+        let dartsPerSegment = { 20:0, 19:0, 18:0, 17:0, 16:0, 15:0, 25:0 };
+        let currentMult = 1;
+        let totalDarts = 0;
+        let lastTarget = 20; // Hilfsvariable f¸r Miss-Zuordnung
+
+        function setMult(m) {
+            currentMult = m;
+            document.querySelectorAll('.m-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById('m'+m).classList.add('active');
+        }
+
+        function render() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            targets.forEach(t => {
+                const isClosed = state[t] >= 3;
+                const row = document.createElement('div');
+                row.className = `target-row ${isClosed ? 'closed' : ''}`;
+                row.onclick = () => handleHit(t);
+
+                let circles = '';
+                for(let i=1; i<=3; i++) {
+                    const fill = state[t] >= i ? 'fill' : '';
+                    circles += `<div class="circle ${fill}">${state[t] >= i ? '' : ''}</div>`;
+                }
+
+                row.innerHTML = `<div class="target-num">${t === 25 ? 'BE' : t}</div><div class="marks">${circles}</div>`;
+                board.appendChild(row);
+            });
+        }
+
+        function handleHit(num) {
+            if(state[num] < 3) {
+                lastTarget = num; // Merken f¸r evtl. Misses
+                let valToAdd = (num === 25 && currentMult > 2) ? 2 : currentMult;
+                state[num] = Math.min(3, state[num] + valToAdd);
+                
+                totalDarts++;
+                dartsPerSegment[num]++; // Dart dem Segment zuordnen
+                
+                updateStats();
+                render();
+                checkWin();
+                setMult(1);
+            }
+        }
+
+        function addMiss() { 
+            totalDarts++; 
+            // Den Miss dem aktuell offenen Target zuordnen (f¸r die Heatmap)
+            let currentOpen = targets.find(t => state[t] < 3);
+            if(currentOpen) dartsPerSegment[currentOpen]++;
+            
+            updateStats(); 
+        }
+
+        function updateStats() {
+            document.getElementById('darts-total').innerText = totalDarts;
+            const mpr = totalDarts > 0 ? (21 / (totalDarts / 3)).toFixed(2) : "0.00";
+            document.getElementById('mpr-live').innerText = mpr;
+        }
+
+        function checkWin() {
+            if (targets.every(t => state[t] >= 3)) {
+                const finalMpr = (21 / (totalDarts / 3)).toFixed(2);
+                document.getElementById('final-stats').innerHTML = `Darts: <b style="color:white">${totalDarts}</b><br>MPR: <b style="color:var(--accent)">${finalMpr}</b>`;
+                document.getElementById('finish-modal').style.display = 'flex';
+                save(totalDarts, finalMpr, dartsPerSegment);
+            }
+        }
+
+        function save(d, m, segmentDetails) {
+            let data = JSON.parse(localStorage.getItem('dart_training_stats')) || {};
+            if(!data.cricket) data.cricket = [];
+            
+            data.cricket.push({ 
+                date: new Date().toISOString(), 
+                darts: d, 
+                mpr: m,
+                // Wir speichern das ganze Objekt f¸r die Grafik!
+                segmentDetails: segmentDetails 
+            });
+            localStorage.setItem('dart_training_stats', JSON.stringify(data));
+        }
+
+        render();
+
+    </script>
+</body>
+</html>

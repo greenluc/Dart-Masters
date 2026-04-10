@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OcheMaster Training Hub</title>
+    <style>
+        :root {
+            --hub-bg: #0a0c10;
+            --accent: #05c46b;
+            --secondary: #1c1f26; 
+            --card-hover: #252a34;
+        }
+
+        body {
+            background: var(--hub-bg);
+            margin: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: white;
+            display: block;
+            overflow-y: auto;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .training-wrapper {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+        }
+
+        header h1 {
+            font-size: 2.8rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin: 0;
+            color: var(--accent);
+            text-shadow: 0 0 20px rgba(5, 196, 107, 0.4);
+            font-weight: 900;
+        }
+
+        header p {
+            opacity: 0.5;
+            margin-top: 10px;
+            letter-spacing: 1px;
+        }
+
+        .training-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); 
+            gap: 25px;
+        }
+
+        .training-card {
+            background: var(--secondary);
+            aspect-ratio: 1 / 1;
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.05);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        .training-card:hover {
+            transform: translateY(-12px);
+            border-color: var(--accent);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(5, 196, 107, 0.2);
+            background: var(--card-hover);
+        }
+
+        .icon-box {
+            font-size: 3.5rem;
+            margin-bottom: 15px;
+            line-height: 1;
+            display: block;
+            /* Erzwingt System-Emoji Schriftart */
+            font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+        }
+
+        .training-card h2 {
+            font-size: 1.3rem;
+            margin: 5px 0;
+            font-weight: 800;
+            color: white;
+            letter-spacing: 0.5px;
+        }
+
+        .training-card p {
+            font-size: 0.85rem;
+            opacity: 0.6;
+            margin-top: 10px;
+            line-height: 1.4;
+            min-height: 2.8em;
+        }
+
+        .btn-exit {
+            margin-top: 60px;
+            display: inline-block;
+            padding: 15px 40px;
+            border-radius: 50px;
+            border: 1px solid rgba(255,255,255,0.15);
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: 0.3s;
+            font-size: 0.9rem;
+        }
+
+        .btn-exit:hover {
+            border-color: #ff3f34;
+            color: #ff3f34;
+            background: rgba(255, 63, 52, 0.05);
+        }
+
+        @media (max-width: 500px) {
+            .training-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .training-card { padding: 15px; border-radius: 20px; }
+            .icon-box { font-size: 2.5rem; }
+            .training-card h2 { font-size: 1rem; }
+            .training-card p { font-size: 0.7rem; }
+            header h1 { font-size: 2rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="training-wrapper">
+        <header>
+            <h1>OcheMaster</h1>
+            <p>Dein Weg zum Profi-Level</p>
+        </header>
+
+        <div class="training-grid">
+            <a href="around_the_clock.html" class="training-card">
+                <span class="icon-box">&#x1F3AF;</span>
+                <h2>ATC</h2>
+                <p>Treffe die Felder 1 bis 20<br>und das Bullseye</p>
+            </a>
+
+            <a href="training_cricket.html" class="training-card">
+                <span class="icon-box">&#x1F3CF;</span>
+                <h2>Cricket</h2>
+                <p>Taktik & Präzision auf die<br>Standard-Zahlen</p>
+            </a>
+
+            <a href="jdc_challenge.html" class="training-card">
+                <span class="icon-box">&#x1F393;</span>
+                <h2>JDC Pro</h2>
+                <p>Das offizielle Test-System<br>der Junior Darts Corp</p>
+            </a>
+
+            <a href="checkout_121.html" class="training-card">
+                <span class="icon-box">&#x1F525;</span>
+                <h2>121</h2>
+                <p>Checke 121 Punkte<br>mit 9 Darts</p>
+            </a>
+
+            <a href="catch_40.html" class="training-card">
+                <span class="icon-box">&#x1F3F9;</span>
+                <h2>Catch 40</h2>
+                <p>Checkout-Wege im Bereich<br>61 bis 100</p>
+            </a>
+
+            <a href="bobs_27.html" class="training-card">
+                <span class="icon-box">&#x2696;&#xFE0F;</span>
+                <h2>Bob's 27</h2>
+                <p>Härtestes Doppel-Training<br>auf dem Markt</p>
+            </a>
+
+            <a href="hiscore.html" class="training-card">
+                <span class="icon-box">&#x1F680;</span>
+                <h2>HiScore</h2>
+                <p>Punkte-Maximierung auf<br>dein Wunsch-Triple</p>
+            </a>
+
+            <a href="a1_drill.html" class="training-card">
+                <span class="icon-box">&#x1F4CB;</span>
+                <h2>A1 Drill</h2>
+                <p>Silberzahn Flightschool<br>Triple-Konstanz</p>
+            </a>
+        </div>
+
+        <div style="text-align: center;">
+             <a href="index.html" class="btn-exit">ZUM HAUPTMENU</a>
+                  <a href="training_stats.html" class="btn-exit">ZUM STATISTIK HUB</a>
+        </div>
+             
+        
+       
+    </div>
+
+</body>
+</html>

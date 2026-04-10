@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catch 40 Statistik - OcheMaster</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0c10; --card: #1c1f26; 
+            --accent: #00d2ff; /* Statistik-Blau */
+            --danger: #ff4757; --gold: #ffa502;
+        }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { text-decoration: none; color: var(--accent); font-weight: bold; border: 1px solid var(--accent); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 0.75rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 15px 0; letter-spacing: 1.5px; }
+        
+        .big-val { font-size: 3.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; text-align: center; }
+        .stat-box label { display: block; font-size: 0.65rem; opacity: 0.5; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-box b { font-size: 1.4rem; color: white; }
+
+        .chart-container { position: relative; height: 250px; width: 100%; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <a href="training_stats.html" class="back-btn">← ANALYTICS</a>
+        <div style="text-align: right;">
+            <div style="font-size: 0.6rem; opacity: 0.5;">PERSONAL BEST</div>
+            <div id="best-score" style="font-size: 1.5rem; font-weight: 900; color: var(--gold);">--</div>
+        </div>
+    </header>
+
+    <div class="card" style="text-align: center;">
+        <h2>Gesamtpunkte (Letzte Session)</h2>
+        <div id="last-score" class="big-val">0</div>
+        
+        <div class="stat-grid">
+            <div class="stat-box">
+                <label>3-Darter (3 Pkt)</label>
+                <b id="count-3">0</b>
+            </div>
+            <div class="stat-box">
+                <label>Ø Darts (Hits)</label>
+                <b id="avg-darts">0.0</b>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Punkteverteilung (61-100)</h2>
+        <div class="chart-container">
+            <canvas id="pointsChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Punkte-Trend</h2>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storage = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+    const history = storage.catch40 || [];
+
+    if (history.length > 0) {
+        const latest = history[history.length - 1];
+        const log = latest.details;
+
+        // Stats berechnen
+        document.getElementById('last-score').innerText = latest.score;
+        const count3 = log.filter(d => d.points === 3).length;
+        document.getElementById('count-3').innerText = count3;
+
+        const hits = log.filter(d => d.darts > 0);
+        const avg = hits.length > 0 ? (hits.reduce((a, b) => a + b.darts, 0) / hits.length).toFixed(1) : "0.0";
+        document.getElementById('avg-darts').innerText = avg;
+
+        const allScores = history.map(h => h.score);
+        document.getElementById('best-score').innerText = Math.max(...allScores);
+
+        // --- CHART 1: Balkendiagramm (Punkte pro Zahl) ---
+        new Chart(document.getElementById('pointsChart'), {
+            type: 'bar',
+            data: {
+                labels: log.map(d => d.target),
+                datasets: [{
+                    label: 'Punkte',
+                    data: log.map(d => d.points),
+                    backgroundColor: log.map(d => {
+                        if(d.points === 3) return '#05c46b'; // Grün für 3 Punkte
+                        if(d.points === 2) return '#00d2ff'; // Blau für 2 Punkte
+                        return '#3d4656'; // Grau für 0 Punkte
+                    }),
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { max: 3, ticks: { stepSize: 1, color: 'rgba(255,255,255,0.5)' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                    x: { ticks: { color: 'white', font: { size: 8 } }, grid: { display: false } }
+                }
+            }
+        });
+
+        // --- CHART 2: Trend ---
+        new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: history.map((_, i) => i + 1),
+                datasets: [{
+                    data: allScores,
+                    borderColor: '#00d2ff',
+                    backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                    x: { display: false }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

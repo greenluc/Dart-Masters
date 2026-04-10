@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDC - Trophäenvitrine</title>
+    <style>
+        :root {
+            --sidebar-width: 80px;
+            --accent: #2ecc71;
+            --bg: #0f1116;
+            --card-bg: #1c1f26;
+            --text-gray: rgba(255,255,255,0.5);
+            --gold: #f1c40f;
+        }
+
+        body {
+            margin: 0; background: var(--bg); color: white;
+            font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden;
+            
+          
+        }/* --- SIDEBAR STYLES (Synchronisiert) --- */
+        .sidebar {
+            width: var(--sidebar-width); background: #07080a;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px 0; border-right: 1px solid rgba(255,255,255,0.05); flex-shrink: 0;
+            height: 100%;
+        }
+        .nav-icon {
+            width: 50px; height: 50px; margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 12px; cursor: pointer; transition: 0.3s;
+            background: rgba(255,255,255,0.03); text-decoration: none; 
+            color: white; font-size: 1.2rem;
+        }
+        .nav-icon:hover, .nav-icon.active { 
+            background: var(--accent); color: #000; 
+            box-shadow: 0 0 15px rgba(46, 204, 113, 0.4);
+        }
+
+
+        #sidebar-container { width: var(--sidebar-width); height: 100vh; background: #07080a; flex-shrink: 0; }
+        .main-content { flex: 1; padding: 40px; overflow-y: auto; }
+        .shelf-container { max-width: 1100px; margin: 0 auto; }
+
+        .filter-nav { display: flex; gap: 25px; margin-bottom: 40px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
+        .filter-link { color: var(--text-gray); text-decoration: none; font-weight: bold; font-size: 0.9rem; transition: 0.3s; cursor: pointer; text-transform: uppercase; letter-spacing: 1px; }
+        .filter-link.active { color: var(--accent); border-bottom: 2px solid var(--accent); padding-bottom: 13px; }
+
+        .trophy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 25px; }
+
+        .trophy-slot {
+            display: flex; flex-direction: column; align-items: center;
+            padding: 40px 20px; border-radius: 24px; background: #16191f;
+            border: 1px solid rgba(255,255,255,0.03); transition: 0.4s ease;
+            position: relative; overflow: hidden;
+        }
+
+        .t-icon {
+            font-size: 4rem; filter: grayscale(1) brightness(0.2); opacity: 0.1;
+            margin-bottom: 15px; transition: 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .t-name { font-size: 0.75rem; color: var(--text-gray); font-weight: 800; text-align: center; line-height: 1.3; text-transform: uppercase; }
+
+        /* Status: Teilgenommen (Silber-Look) */
+        .trophy-slot.participated { 
+            border-color: rgba(255, 255, 255, 0.1); 
+            background: rgba(255, 255, 255, 0.02); 
+        }
+        .trophy-slot.participated .t-icon { 
+            filter: grayscale(1) brightness(0.8); 
+            opacity: 0.4; 
+        }
+
+        /* Status: Gewonnen (Gold-Look) */
+        .trophy-slot.won {
+            background: linear-gradient(145deg, #1c1f26, #11141a);
+            border-color: rgba(241, 196, 15, 0.4);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.4);
+        }
+        .trophy-slot.won .t-icon { 
+            filter: grayscale(0) brightness(1); 
+            opacity: 1; 
+            transform: translateY(-8px); 
+            filter: drop-shadow(0 10px 15px rgba(241, 196, 15, 0.5)); 
+        }
+        .trophy-slot.won .t-name { color: white; }
+        
+        .win-badge {
+            position: absolute; top: 15px; background: var(--gold); color: black;
+            font-size: 0.5rem; font-weight: 900; padding: 3px 10px; border-radius: 20px;
+            letter-spacing: 1px;
+        }
+
+        .t-info-badge { 
+            font-size: 0.6rem; margin-top: 10px; color: var(--accent); 
+            font-weight: bold; opacity: 0.8; 
+        }
+
+        h1 { font-size: 2.8rem; margin: 0 0 10px 0; letter-spacing: -1.5px; font-weight: 900; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-container"></div>
+
+    <div class="main-content">
+        <div class="shelf-container">
+            <header>
+                <h1>Trophäenvitrine</h1>
+                <p style="color: var(--text-gray); margin-bottom: 40px; font-size: 1.1rem;">Deine PDC Karriere-Erfolge & Titel</p>
+            </header>
+
+            <div class="filter-nav">
+                <span class="filter-link active" onclick="changeTab('Major', this)">Majors</span>
+                <span class="filter-link" onclick="changeTab('EuroTour', this)">European Tour</span>
+                <span class="filter-link" onclick="changeTab('ProTour', this)">Pro Tour</span>
+            </div>
+
+            <div class="trophy-grid" id="shelf"></div>
+        </div>
+    </div>
+
+    <script src="sidebar_config.js"></script>
+    <script src="career_data.js"></script>
+    <script>
+        let currentTab = 'Major';
+
+        window.onload = () => {
+            if (typeof injectSidebar === "function") injectSidebar();
+            renderShelf();
+        };
+
+        function renderShelf() {
+            const shelf = document.getElementById('shelf');
+            shelf.innerHTML = "";
+            
+            // Lade das Archiv der beendeten Turniere
+            const archive = JSON.parse(localStorage.getItem('tournament_archive') || "[]");
+
+            // Filter den Kalender nach dem aktuellen Tab
+            const filteredEvents = PDC_TOUR_DATA.calendar.filter(e => {
+                let typeForFilter = e.type;
+                // Spezial-Mapping für große Turniere
+                if (e.name.includes("World Darts Championship") || e.name.includes("Matchplay")) typeForFilter = "Major";
+                return typeForFilter === currentTab;
+            });
+
+            filteredEvents.forEach(event => {
+                // Prüfe, ob das Turnier im Archiv existiert
+                const myResult = archive.find(entry => entry.tournament === event.name);
+                
+                const hasWon = myResult && myResult.userResult === "Sieg";
+                const hasParticipated = myResult && myResult.userResult === "Teilgenommen";
+
+                const slot = document.createElement('div');
+                slot.className = `trophy-slot ${hasWon ? 'won' : (hasParticipated ? 'participated' : '')}`;
+                
+                // Icon Logik
+                let icon = "🏆"; 
+                const n = event.name.toLowerCase();
+                if (n.includes("world darts championship")) icon = "👑";
+                else if (n.includes("matchplay")) icon = "🌊";
+                else if (n.includes("grand slam")) icon = "🔥";
+                else if (event.type === "EuroTour") icon = "🌍";
+                else if (event.type === "ProTour") icon = "🏅";
+
+                slot.innerHTML = `
+                    ${hasWon ? '<div class="win-badge">CHAMPION</div>' : ''}
+                    <div style="position:absolute; top:12px; right:15px; font-size:0.7rem; opacity:0.3; font-weight:bold;">${event.location.split(',')[0]}</div>
+                    <div class="t-icon">${icon}</div>
+                    <div class="t-name">${event.name}</div>
+                    ${myResult ? `<div class="t-info-badge">Ergebnis: ${myResult.userResult}</div>` : ''}
+                `;
+                shelf.appendChild(slot);
+            });
+            
+            if(filteredEvents.length === 0) {
+                shelf.innerHTML = `<div style="grid-column: 1/-1; text-align: center; opacity: 0.3; padding: 50px;">Keine Turniere in dieser Kategorie gefunden.</div>`;
+            }
+        }
+
+        function changeTab(type, element) {
+            currentTab = type;
+            document.querySelectorAll('.filter-link').forEach(l => l.classList.remove('active'));
+            element.classList.add('active');
+            renderShelf();
+        }
+    </script>
+</body>
+</html>

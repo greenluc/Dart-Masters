@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JDC Challenge Pro</title>
+    <style>
+        :root { --accent: #05c46b; --secondary: #1c1f26; }
+        body { background: #0a0c10; font-family: 'Segoe UI', sans-serif; color: white; margin: 0; overflow: hidden; }
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; position: relative; height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
+        
+        .btn-close { position: absolute; top: 15px; right: 15px; width: 35px; height: 35px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: white; border: 1px solid rgba(255,255,255,0.1); z-index: 100; }
+
+        .header-title {
+            margin-top: 10px;
+            margin-bottom: 25px;
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+            color: var(--accent);
+            text-transform: uppercase;
+            font-weight: 900;
+        }
+        
+        .part-indicator { color: #ffa502; font-weight: bold; font-size: 0.8rem; letter-spacing: 1px; margin-top: 10px; text-transform: uppercase; }
+        .target-box { background: var(--secondary); border-radius: 20px; padding: 20px; margin: 10px 0; border: 1px solid var(--accent); min-height: 120px; display: flex; flex-direction: column; justify-content: center; }
+        .target-num { font-size: 4.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        
+        .dart-status { display: flex; justify-content: center; gap: 15px; margin-bottom: 10px; min-height: 44px; }
+        .dart-dot { width: 40px; height: 40px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.9rem; }
+        .dart-dot.active { border-color: var(--accent); color: var(--accent); }
+        .dart-dot.filled { background: var(--accent); color: black; border-color: var(--accent); }
+
+        .score-total { font-size: 3rem; font-weight: 900; line-height: 1; margin-top: 5px; }
+        .score-label { opacity: 0.4; font-size: 0.6rem; text-transform: uppercase; margin-bottom: 20px; }
+
+        .input-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: center; }
+        .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        
+        .btn-action { background: #252a34; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 25px 10px; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.1s; }
+        .btn-action:active { background: #3d4656; transform: scale(0.98); }
+        
+        .btn-confirm { background: var(--accent); color: black; grid-column: span 2; padding: 20px; border-radius: 15px; font-weight: 900; font-size: 1.2rem; border: none; margin-top: 10px; opacity: 0.2; pointer-events: none; transition: 0.3s; }
+        .btn-confirm.ready { opacity: 1; pointer-events: auto; box-shadow: 0 5px 0 #04a558; }
+
+        .btn-double { grid-column: span 2; padding: 35px !important; font-size: 1.8rem !important; background: var(--accent) !important; color: black !important; border: none !important; box-shadow: 0 6px 0 #04a558; }
+
+        #finish-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 1000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-card { background: var(--secondary); padding: 40px 30px; border-radius: 30px; text-align: center; width: 80%; border: 1px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <a href="training_hub.html" class="btn-close">✕</a>
+        <div class="header-title">JDC Challenge Pro</div>
+
+        <div id="part-name" class="part-indicator">Part 1: Shanghai 10-15</div>
+        
+        <div class="target-box">
+            <div id="current-target" class="target-num">10</div>
+            <div id="instruction" style="font-size: 0.7rem; opacity: 0.5; margin-top: 5px;">Scoring auf die Zahl</div>
+        </div>
+
+        <div id="dart-row" class="dart-status">
+            <div id="dart-1" class="dart-dot active">1</div>
+            <div id="dart-2" class="dart-dot">2</div>
+            <div id="dart-3" class="dart-dot">3</div>
+        </div>
+
+        <div id="total-score" class="score-total">0</div>
+        <div class="score-label">Gesamtpunkte</div>
+
+        <div class="input-area">
+            <div id="ui-shanghai" class="grid-inputs">
+                <button class="btn-action" onclick="recordShanghaiDart('S')">SINGLE</button>
+                <button class="btn-action" onclick="recordShanghaiDart('D')">DOUBLE</button>
+                <button class="btn-action" onclick="recordShanghaiDart('T')">TRIPLE</button>
+                <button class="btn-action" onclick="recordShanghaiDart('M')" style="opacity: 0.5;">MISS</button>
+                <button id="confirm-btn" class="btn-confirm" onclick="confirmShanghaiRound()">RUNDE BESTÄTIGEN</button>
+            </div>
+
+            <div id="ui-double" class="grid-inputs" style="display:none;">
+                <button class="btn-action btn-double" onclick="recordDoubleRound(true)">HIT (50 PKT)</button>
+                <button class="btn-action" onclick="recordDoubleRound(false)" style="grid-column: span 2; background: #3d4656; opacity: 0.7;">MISS</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="finish-modal">
+        <div class="modal-card">
+            <h2 style="color:var(--accent);">FERTIG!</h2>
+            <div id="final-score" style="font-size: 4.5rem; font-weight: 900; margin: 20px 0; color: white;">0</div>
+            <button onclick="window.location.href='training_hub.html'" class="btn-confirm ready">SPEICHERN</button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        // Neue Variablen für detaillierte Statistik
+        let p1Score = 0; // Shanghai 10-15
+        let p2Score = 0; // Doubles
+        let p3Score = 0; // Shanghai 15-20
+        
+        let currentDarts = [];
+        let pIdx = 0, tIdx = 0;
+
+        const flow = [
+            { type: 'shanghai', targets: [10,11,12,13,14,15], name: 'Part 1: Shanghai 10-15' },
+            { type: 'doubles', targets: [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,'BULL'], name: 'Part 2: Doubles 1-20' },
+            { type: 'shanghai', targets: [15,16,17,18,19,20], name: 'Part 3: Shanghai 15-20' }
+        ];
+
+        function recordShanghaiDart(val) {
+            if (currentDarts.length < 3) {
+                currentDarts.push(val);
+                updateDartDots();
+            }
+            if (currentDarts.length === 3) {
+                document.getElementById('confirm-btn').classList.add('ready');
+            }
+        }
+
+        function confirmShanghaiRound() {
+            const target = flow[pIdx].targets[tIdx];
+            let roundScore = 0;
+            let hits = { S:0, D:0, T:0 };
+
+            currentDarts.forEach(d => {
+                if(d === 'S') { roundScore += target; hits.S++; }
+                if(d === 'D') { roundScore += (target * 2); hits.D++; }
+                if(d === 'T') { roundScore += (target * 3); hits.T++; }
+            });
+
+            if(hits.S > 0 && hits.D > 0 && hits.T > 0) roundScore += 100;
+            
+            score += roundScore;
+            
+            // Teil-Scores tracken
+            if (pIdx === 0) p1Score += roundScore;
+            if (pIdx === 2) p3Score += roundScore;
+
+            tIdx++;
+            checkProgress();
+            resetShanghaiUI();
+        }
+
+        function recordDoubleRound(hit) {
+            const target = flow[pIdx].targets[tIdx];
+            let roundScore = 0;
+            if(hit) {
+                roundScore = (target === 'BULL' ? 100 : 50);
+                score += roundScore;
+                p2Score += roundScore;
+            }
+            tIdx++;
+            checkProgress();
+            updateUI();
+        }
+
+        function checkProgress() {
+            if (tIdx >= flow[pIdx].targets.length) {
+                pIdx++;
+                tIdx = 0;
+            }
+            if (pIdx >= flow.length) {
+                showFinish();
+            } else {
+                updateUI();
+            }
+        }
+
+        function updateUI() {
+            const current = flow[pIdx];
+            document.getElementById('part-name').innerText = current.name;
+            document.getElementById('current-target').innerText = current.targets[tIdx];
+            document.getElementById('total-score').innerText = score;
+
+            if(current.type === 'shanghai') {
+                document.getElementById('ui-shanghai').style.display = 'grid';
+                document.getElementById('ui-double').style.display = 'none';
+                document.getElementById('dart-row').style.visibility = 'visible';
+                document.getElementById('instruction').innerText = "Scoring auf die Zahl";
+            } else {
+                document.getElementById('ui-shanghai').style.display = 'none';
+                document.getElementById('ui-double').style.display = 'grid';
+                document.getElementById('dart-row').style.visibility = 'hidden';
+                document.getElementById('instruction').innerText = "Nur 1 Dart pro Doppel";
+            }
+        }
+
+        function updateDartDots() {
+            for(let i=1; i<=3; i++) {
+                const dot = document.getElementById(`dart-${i}`);
+                if (currentDarts[i-1]) {
+                    dot.innerText = currentDarts[i-1];
+                    dot.className = 'dart-dot filled';
+                } else {
+                    dot.innerText = i;
+                    dot.className = i === currentDarts.length + 1 ? 'dart-dot active' : 'dart-dot';
+                }
+            }
+        }
+
+        function resetShanghaiUI() {
+            currentDarts = [];
+            updateDartDots();
+            document.getElementById('confirm-btn').classList.remove('ready');
+        }
+
+        function showFinish() {
+            document.getElementById('final-score').innerText = score;
+            document.getElementById('finish-modal').style.display = 'flex';
+            
+            // ERWEITERTES SPEICHERN
+            let stats = JSON.parse(localStorage.getItem('dart_training_stats')) || {};
+            if (!stats.jdc) stats.jdc = [];
+            
+            stats.jdc.push({ 
+                date: new Date().toISOString(), 
+                score: score,
+                details: {
+                    part1: p1Score,
+                    part2: p2Score,
+                    part3: p3Score
+                }
+            });
+            localStorage.setItem('dart_training_stats', JSON.stringify(stats));
+        }
+
+        updateUI();
+    </script>
+</body>
+</html>

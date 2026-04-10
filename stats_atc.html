@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ATC Statistik - OcheMaster</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #0a0c10; --card: #1c1f26; 
+            --accent: #00d2ff; /* Hellblau für Statistik */
+            --danger: #ff4757; --gold: #ffa502;
+        }
+        body { background: var(--bg); color: white; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 15px; }
+        .container { max-width: 800px; margin: 0 auto; }
+        
+        header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .back-btn { text-decoration: none; color: var(--accent); font-weight: bold; border: 1px solid var(--accent); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; }
+
+        .card { background: var(--card); border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.05); }
+        h2 { font-size: 0.75rem; text-transform: uppercase; opacity: 0.5; margin: 0 0 15px 0; letter-spacing: 1.5px; }
+        
+        .big-val { font-size: 3.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        
+        .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px; }
+        .stat-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid rgba(255,255,255,0.03); }
+        .stat-box label { display: block; font-size: 0.65rem; opacity: 0.5; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-box b { font-size: 1.4rem; color: white; }
+
+        .chart-container { position: relative; height: 220px; width: 100%; margin-top: 10px; }
+        .problem-zone { color: var(--danger) !important; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <a href="training_stats.html" class="back-btn">← ANALYTICS</a>
+        <div style="text-align: right;">
+            <div style="font-size: 0.6rem; opacity: 0.5;">BESTE RUNDE</div>
+            <div id="best-atc" style="font-size: 1.5rem; font-weight: 900; color: var(--gold);">--</div>
+        </div>
+    </header>
+
+    <div class="card" style="text-align: center;">
+        <h2>Darts pro Zahl (Ø)</h2>
+        <div id="avg-darts" class="big-val">0.0</div>
+        
+        <div class="stat-grid">
+            <div class="stat-box">
+                <label>Letzte Session</label>
+                <b id="total-darts">0</b>
+            </div>
+            <div class="stat-box">
+                <label>Problem-Feld</label>
+                <b id="worst-num" class="problem-zone">-</b>
+            </div>
+        </div>
+    </div>
+  
+    <div class="card">
+        <h2>Präzisions-Heatmap (Letzte Session)</h2>
+        <div class="chart-container">
+            <canvas id="atcChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>Langzeit-Trend (Gesamt Darts)</h2>
+        <div class="chart-container">
+            <canvas id="trendChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const storage = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+    const atcHistory = storage.atc || [];
+
+    if (atcHistory.length > 0) {
+        const latest = atcHistory[atcHistory.length - 1];
+        
+        document.getElementById('avg-darts').innerText = (latest.darts / 21).toFixed(1);
+        document.getElementById('total-darts').innerText = latest.darts;
+        
+        const allTotals = atcHistory.map(h => h.darts);
+        document.getElementById('best-atc').innerText = Math.min(...allTotals);
+
+        // --- TREND CHART (Langzeit) ---
+        new Chart(document.getElementById('trendChart'), {
+            type: 'line',
+            data: {
+                labels: atcHistory.map((h, i) => i + 1),
+                datasets: [{
+                    label: 'Darts gesamt',
+                    data: allTotals,
+                    borderColor: '#00d2ff',
+                    backgroundColor: 'rgba(0, 210, 255, 0.1)',
+                    borderWidth: 3,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#00d2ff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)' } },
+                    x: { ticks: { display: false }, grid: { display: false } }
+                }
+            }
+        });
+
+        // --- HEATMAP CHART (Letzte Session) ---
+        const hitMap = latest.details; 
+        let maxDarts = 0;
+        let worstNum = "-";
+        const labels = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, "BULL"];
+        const chartData = labels.map(label => {
+            const val = hitMap[label] || 0;
+            if(val > maxDarts) { maxDarts = val; worstNum = label; }
+            return val;
+        });
+        document.getElementById('worst-num').innerText = worstNum;
+
+        new Chart(document.getElementById('atcChart'), {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: chartData,
+                    backgroundColor: chartData.map(d => d > 3 ? 'rgba(255, 71, 87, 0.6)' : 'rgba(0, 210, 255, 0.6)'),
+                    borderColor: chartData.map(d => d > 3 ? '#ff4757' : '#00d2ff'),
+                    borderWidth: 1,
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: 'rgba(255,255,255,0.5)', stepSize: 1 } },
+                    x: { grid: { display: false }, ticks: { color: 'white', font: { size: 10 } } }
+                }
+            }
+        });
+    }
+</script>
+</body>
+</html>

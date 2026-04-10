@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDC Order of Merit 2026</title>
+    <style>
+        :root {
+            --sidebar-width: 80px;
+            --accent: #2ecc71;
+            --bg: #0f1116;
+            --card-bg: #1c1f26;
+            --modal-bg: #16191f;
+            --text-gray: rgba(255,255,255,0.5);
+            --gold: #f1c40f;
+            --danger: #ff4757;
+        }
+        
+        body {
+            margin: 0; background: var(--bg); color: white;
+            font-family: 'Inter', sans-serif; display: flex; height: 100vh; overflow: hidden;
+        }
+
+        #sidebar-container { width: var(--sidebar-width); height: 100vh; background: #07080a; flex-shrink: 0; }
+        .main-content { flex: 1; padding: 40px; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* Tabs */
+        .tab-container { display: flex; gap: 8px; margin-bottom: 25px; flex-wrap: wrap; }
+        .tab-btn {
+            background: rgba(255,255,255,0.05); color: white; border: 1px solid rgba(255,255,255,0.1);
+            padding: 10px 16px; border-radius: 10px; cursor: pointer; transition: 0.2s; font-weight: bold; font-size: 0.85rem;
+        }
+        .tab-btn.active { background: var(--accent); color: black; border-color: var(--accent); }
+
+        /* Ranking Liste */
+        .ranking-list { overflow-y: auto; flex: 1; padding-right: 10px; }
+        
+        .rank-card {
+            background: var(--card-bg); border-radius: 16px; padding: 15px 25px;
+            display: grid; grid-template-columns: 50px 60px 40px 1fr 180px;
+            align-items: center; border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 8px; transition: 0.2s; cursor: pointer;
+        }
+        .rank-card:hover { border-color: var(--accent); transform: translateX(5px); background: #252a33; }
+        .rank-card.is-me { border: 1px solid var(--accent); background: rgba(46, 204, 113, 0.05); }
+
+        .pos { font-weight: 900; color: var(--accent); font-size: 1.1rem; }
+        .trend { font-size: 0.85rem; text-align: center; min-width: 45px; font-weight: bold; }
+
+        .flag { font-size: 1.4rem; }
+        .name-container { display: flex; flex-direction: column; padding-left: 10px; }
+        .name { font-weight: bold; font-size: 1rem; }
+        .money { text-align: right; font-weight: 900; color: var(--gold); font-size: 1.1rem; }
+
+        /* MODAL STYLES */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); display: none;
+            justify-content: center; align-items: center; z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            background: var(--modal-bg); width: 90%; max-width: 550px; 
+            max-height: 85vh; border-radius: 24px; padding: 30px; 
+            border: 1px solid var(--accent); text-align: center;
+            display: flex; flex-direction: column;
+        }
+        #modalBody { flex: 1; overflow-y: hidden; display: flex; flex-direction: column; }
+        .history-scroll-area {
+            background: rgba(0,0,0,0.2); padding: 15px; border-radius: 18px; 
+            overflow-y: auto; flex: 1; margin-top: 15px;
+            border: 1px solid rgba(255,255,255,0.03); text-align: left;
+        }
+        .close-btn {
+            background: var(--accent); color: black; border: none; padding: 15px;
+            border-radius: 12px; font-weight: bold; cursor: pointer; margin-top: 20px; width: 100%;
+        }
+
+        .sidebar {
+            width: var(--sidebar-width); background: #07080a;
+            display: flex; flex-direction: column; align-items: center;
+            padding: 20px 0; height: 100vh; border-right: 1px solid rgba(255,255,255,0.05);
+        }
+        .nav-icon {
+            width: 50px; height: 50px; margin-bottom: 20px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 12px; background: rgba(255,255,255,0.03);
+            text-decoration: none; font-size: 1.5rem; transition: 0.3s;
+        }
+        .nav-icon.active { background: var(--accent); color: #000; }
+    </style>
+</head>
+<body>
+
+    <div id="sidebar-container"></div>
+
+    <div class="main-content">
+        <header style="margin-bottom: 20px;">
+            <h1 id="rank-title">PDC Order of Merit 2026</h1>
+            <p id="rank-subtitle" style="opacity: 0.5;">Offizielle Weltrangliste der PDC</p>
+        </header>
+
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="renderRanking('main')" id="tab-main">Main OOM</button>
+            <button class="tab-btn" onclick="renderRanking('protour')" id="tab-protour">ProTour</button>
+            <button class="tab-btn" onclick="renderRanking('pc')" id="tab-pc">Players Champ</button>
+            <button class="tab-btn" onclick="renderRanking('et')" id="tab-et">Euro Tour</button>
+        </div>
+
+        <div class="ranking-list" id="ranking-list"></div>
+    </div>
+
+    <div class="modal-overlay" id="playerModal" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div id="modalBody"></div>
+            <button class="close-btn" onclick="closeModal()">Schließen</button>
+        </div>
+    </div>
+
+    <script src="player_db.js"></script>
+    <script src="career_data.js"></script>
+    <script src="sidebar_config.js"></script> 
+    <script src="career_logic.js"></script> 
+<script>
+    let currentMode = 'main';
+
+    // Einzige window.onload Funktion (zusammengeführt)
+    window.onload = () => {
+        if (typeof injectSidebar === "function") injectSidebar();
+        
+        // Sicherstellen, dass Trends existieren, bevor gerendert wird
+        checkAndFixTrends(); 
+        
+        renderRanking('main');
+    };
+
+    /**
+     * Prüft, ob Spieler in der Datenbank bereits Trend-Emojis haben.
+     * Falls nicht (z.B. direkt nach der Simulation), wird ein neutraler Punkt gesetzt.
+     */
+    function checkAndFixTrends() {
+        let players = JSON.parse(localStorage.getItem('pdc_world_players'));
+        if (!players) return;
+
+        let needsUpdate = false;
+        players.forEach(p => {
+            // Wenn kein Emoji da ist oder nur ein technischer Platzhalter
+            if (!p.trendEmoji || p.trendEmoji.trim() === "" || p.trendEmoji.includes("")) {
+                p.trendEmoji = ""; 
+                needsUpdate = true;
+            }
+        });
+
+        if (needsUpdate) {
+            localStorage.setItem('pdc_world_players', JSON.stringify(players));
+        }
+    }
+
+    /**
+     * Ermittelt das Geld basierend auf dem gewählten Ranking-Tab
+     */
+    function calculateMoney(player, type) {
+        if (type === 'pc') return player.m_pc || 0;
+        if (type === 'et') return player.m_et || 0;
+        if (type === 'protour') return (player.m_pc || 0) + (player.m_et || 0);
+        return player.m || 0; // Main OOM
+    }
+
+    /**
+     * Hauptfunktion zur Anzeige der Rangliste
+     */
+    function renderRanking(mode = 'main') {
+        currentMode = mode;
+        const list = document.getElementById('ranking-list');
+        // Daten aus LocalStorage laden
+        const players = JSON.parse(localStorage.getItem('pdc_world_players')) || (typeof ALL_PLAYERS !== 'undefined' ? ALL_PLAYERS : []);
+        const careerPlayer = JSON.parse(localStorage.getItem('career_player'));
+        
+        // Titel-Update je nach Tab
+        const titles = { 
+            'main': 'Main OOM', 
+            'protour': 'ProTour OOM', 
+            'pc': 'Players Championship', 
+            'et': 'European Tour' 
+        };
+        document.getElementById('rank-title').innerText = titles[mode] || 'PDC Order of Merit';
+
+        // Tab-Styling aktualisieren
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        const activeBtn = document.getElementById(`tab-${mode}`);
+        if(activeBtn) activeBtn.classList.add('active');
+        
+        // Daten sortieren (Primär nach Geld, Sekundär alphabetisch für Stabilität)
+        const displayData = players.map(p => ({
+            ...p,
+            tempMoney: calculateMoney(p, mode)
+        })).sort((a, b) => {
+            if (b.tempMoney !== a.tempMoney) return b.tempMoney - a.tempMoney;
+            return a.n.localeCompare(b.n);
+        });
+
+        list.innerHTML = "";
+
+        displayData.forEach((p, index) => {
+            const currentRank = index + 1;
+            const isMe = careerPlayer && p.n === careerPlayer.name;
+            
+            // Trend-Emoji (nur im Main OOM sinnvoll, sonst neutral)
+            const trend = (mode === 'main') ? (p.trendEmoji || "") : "";
+
+            const card = document.createElement('div');
+            card.className = `rank-card ${isMe ? 'is-me' : ''}`;
+            card.onclick = () => showPlayerDetails(p, currentRank);
+
+            card.innerHTML = `
+                <div class="pos">#${currentRank}</div>
+                <div class="trend">${trend}</div>
+                <div class="flag">${p.c}</div>
+                <div class="name-container">
+                    <span class="name">${p.n} ${isMe ? '(DU)' : ''}</span>
+                    <span style="font-size:0.7rem; opacity:0.5;">PDC Professional</span>
+                </div>
+                <div class="money">&pound;${p.tempMoney.toLocaleString()}</div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    /**
+     * Öffnet das Modal mit Spielerdetails und Historie
+     */
+    function showPlayerDetails(p, rank) {
+        const body = document.getElementById('modalBody');
+        const fullHistory = p.history || [];
+        
+        // Historie umkehren, damit neueste Ergebnisse oben stehen
+        const historyHTML = [...fullHistory].reverse().map(h => `
+            <div style="display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                <div>
+                    <div style="font-weight:bold; font-size:0.9rem;">${h.name}</div>
+                    <div style="font-size:0.75rem; opacity:0.6;">${h.date} • <span style="color:var(--accent)">${h.res}</span></div>
+                </div>
+                <div style="text-align:right">
+                    <span style="color:var(--gold); font-weight:900;">+&pound;${(h.prize || 0).toLocaleString()}</span>
+                </div>
+            </div>
+        `).join('');
+
+        body.innerHTML = `
+            <div style="font-size: 3.5rem; margin-bottom: 10px;">${p.c}</div>
+            <h2 style="margin:0; color: var(--accent); font-size: 2rem;">${p.n}</h2>
+            
+            <div style="display:flex; justify-content:center; gap:15px; margin: 20px 0;">
+                <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:15px; min-width:100px;">
+                    <small style="display:block; opacity:0.5; font-size:0.7rem;">RANG</small>
+                    <b style="font-size:1.2rem;">#${rank}</b>
+                </div>
+                <div style="background:rgba(255,255,255,0.05); padding:12px; border-radius:15px; min-width:100px;">
+                    <small style="display:block; opacity:0.5; font-size:0.7rem;">AVG</small>
+                    <b style="font-size:1.2rem;">${p.a}</b>
+                </div>
+            </div>
+
+            <h3 style="text-align:left; margin:10px 0; font-size:0.85rem; color:var(--accent); text-transform:uppercase;">
+                Karriere-Historie (${fullHistory.length})
+            </h3>
+            
+            <div class="history-scroll-area">
+                ${historyHTML || '<div style="text-align:center; opacity:0.5; padding:20px;">Keine Daten verfügbar</div>'}
+            </div>
+        `;
+        document.getElementById('playerModal').style.display = 'flex';
+    }
+
+    function closeModal() { 
+        document.getElementById('playerModal').style.display = 'none'; 
+    }
+</script>
+
+</body>
+</html>

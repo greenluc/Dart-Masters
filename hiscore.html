@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>HiScore Pro - OcheMaster</title>
+    <style>
+        :root { 
+            --accent: #05c46b; /* Zurück auf Grün */
+            --secondary: #1c1f26; 
+            --danger: #ff4757; 
+            --multiplier: #ffa502; 
+            --blue: #34ace0; 
+        }
+        body { background: #0a0c10; font-family: 'Segoe UI', sans-serif; color: white; margin: 0; overflow: hidden; }
+        
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; text-align: center; position: relative; height: 100vh; display: flex; flex-direction: column; box-sizing: border-box; }
+        .btn-close { position: absolute; top: 15px; right: 15px; width: 35px; height: 35px; background: rgba(255,255,255,0.05); border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; color: white; border: 1px solid rgba(255,255,255,0.1); z-index: 100; }
+
+        #setup-screen { position: fixed; inset: 0; background: #0a0c10; z-index: 3000; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .setup-group { margin-bottom: 25px; width: 100%; max-width: 320px; text-align: left; }
+        .setup-group label { font-size: 0.8rem; color: var(--accent); font-weight: bold; letter-spacing: 1px; margin-left: 5px; text-transform: uppercase; }
+        .setup-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 8px; }
+        .setup-btn { background: var(--secondary); border: 1px solid rgba(255,255,255,0.1); color: white; padding: 12px 0; border-radius: 12px; font-weight: bold; cursor: pointer; }
+        .setup-btn.active { border-color: var(--accent); background: rgba(5, 196, 107, 0.1); color: var(--accent); }
+
+        .header-title { margin-top: 10px; margin-bottom: 10px; font-size: 1.2rem; letter-spacing: 2px; color: var(--accent); text-transform: uppercase; font-weight: 900; }
+        .stats-row { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .badge { background: #252a34; padding: 5px 12px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; border: 1px solid rgba(255,255,255,0.1); }
+
+        .target-box { background: var(--secondary); border-radius: 20px; padding: 20px; margin: 10px 0; border: 1px solid var(--accent); min-height: 120px; display: flex; flex-direction: column; justify-content: center; }
+        .target-num { font-size: 4.5rem; font-weight: 900; color: var(--accent); line-height: 1; }
+        
+        .dart-status { display: flex; justify-content: center; gap: 8px; margin: 15px 0; }
+        .dart-dot { width: 14px; height: 14px; border-radius: 50%; background: #333; border: 1px solid rgba(255,255,255,0.1); transition: 0.2s; }
+        .dart-dot.used { background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+        .input-area { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 10px; }
+        .btn-action { background: #252a34; border: 1px solid rgba(255,255,255,0.1); color: white; padding: 25px 10px; border-radius: 15px; font-weight: bold; cursor: pointer; font-size: 1.2rem; transition: 0.1s; }
+        .m-double { border-bottom: 4px solid var(--blue); }
+        .m-triple { border-bottom: 4px solid var(--multiplier); }
+
+        #finish-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.96); z-index: 4000; justify-content: center; align-items: center; backdrop-filter: blur(10px); }
+        .modal-card { background: var(--secondary); padding: 40px 30px; border-radius: 30px; text-align: center; width: 80%; border: 1px solid var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <h1 style="color:var(--accent); margin-bottom: 30px; letter-spacing: 2px;">HISCORE SETUP</h1>
+        <div class="setup-group">
+            <label>Zielfeld</label>
+            <div class="setup-grid" id="target-select">
+                <button class="setup-btn active" onclick="setTarget(20, this)">20</button>
+                <button class="setup-btn" onclick="setTarget(19, this)">19</button>
+                <button class="setup-btn" onclick="setTarget(18, this)">18</button>
+                <button class="setup-btn" onclick="setTarget(17, this)">Bull</button>
+            </div>
+        </div>
+        <div class="setup-group">
+            <label>Aufnahmen</label>
+            <div class="setup-grid" id="rounds-select">
+                <button class="setup-btn active" onclick="setRounds(10, this)">10</button>
+                <button class="setup-btn" onclick="setRounds(20, this)">20</button>
+                <button class="setup-btn" onclick="setRounds(30, this)">30</button>
+                <button class="setup-btn" onclick="setRounds(50, this)">50</button>
+            </div>
+        </div>
+        <button class="btn-action" style="width:100%; max-width:320px; background:var(--accent); color:black; margin-top:20px; font-weight: 900;" onclick="startGame()">START</button>
+    </div>
+
+    <div class="container">
+        <a href="training_hub.html" class="btn-close">✕</a>
+        <div class="header-title">HiScore Power</div>
+
+        <div class="stats-row">
+            <div class="badge">SCORE: <span id="ui-score">0</span></div>
+            <div class="badge">RUNDE: <span id="ui-round">1</span>/<span id="ui-max-round">10</span></div>
+        </div>
+        
+        <div class="target-box">
+            <div id="ui-target" class="target-num">20</div>
+            <div style="font-size:0.7rem; opacity:0.5; text-transform:uppercase;">Aktuelles Ziel</div>
+        </div>
+
+        <div class="dart-status" id="dart-dots">
+            <div class="dart-dot"></div><div class="dart-dot"></div><div class="dart-dot"></div>
+        </div>
+
+        <div style="flex-grow:1"></div>
+
+        <div class="input-area">
+            <button class="btn-action" style="opacity:0.6" onclick="hit(0)">MISS</button>
+            <button class="btn-action" onclick="hit(1)">SINGLE</button>
+            <button class="btn-action m-double" onclick="hit(2)">DOUBLE</button>
+            <button class="btn-action m-triple" onclick="hit(3)">TRIPLE</button>
+            <button style="grid-column: span 2; background: none; border: none; color: var(--danger); font-size: 0.8rem; font-weight: bold; padding: 10px;" onclick="undo()">RÜCKGÄNGIG</button>
+        </div>
+    </div>
+
+    <div id="finish-modal">
+        <div class="modal-card">
+            <h2 style="color:var(--accent); margin:0;">SESSION BEENDET</h2>
+            <div id="final-points" style="font-size: 4rem; font-weight: 900; margin: 15px 0; color:white;">0</div>
+            <div id="res-stats" style="font-size: 0.85rem; opacity: 0.8; line-height: 1.6; margin-bottom: 25px;"></div>
+            <button onclick="window.location.href='training_hub.html'" class="btn-action" style="width:100%; background:var(--accent); color:black; font-weight:900;">FERTIG</button>
+        </div>
+    </div>
+
+    <script>
+        let config = { target: 20, maxRounds: 10 };
+        let dartHistory = [];
+        let sessionStats = { s60: 0, s100: 0, s140: 0, s180: 0 };
+        let currentRoundScore = 0;
+
+        function setTarget(v, b) { config.target = (v === 17 && b.innerText === 'Bull') ? 25 : v; updateSetupBtns('target-select', b); }
+        function setRounds(v, b) { config.maxRounds = v; updateSetupBtns('rounds-select', b); }
+        function updateSetupBtns(id, b) { document.querySelectorAll(`#${id} .setup-btn`).forEach(btn => btn.classList.remove('active')); b.classList.add('active'); }
+
+        function startGame() {
+            document.getElementById('ui-target').innerText = config.target === 25 ? 'BULL' : config.target;
+            document.getElementById('ui-max-round').innerText = config.maxRounds;
+            document.getElementById('setup-screen').style.display = 'none';
+        }
+
+        function hit(m) {
+            if (dartHistory.length >= config.maxRounds * 3) return;
+            
+            dartHistory.push(m);
+            currentRoundScore += (m * config.target);
+
+            // Wenn Aufnahme (3 Darts) voll
+            if (dartHistory.length % 3 === 0) {
+                if (currentRoundScore >= 180) sessionStats.s180++;
+                else if (currentRoundScore >= 140) sessionStats.s140++;
+                else if (currentRoundScore >= 100) sessionStats.s100++;
+                else if (currentRoundScore >= 60) sessionStats.s60++;
+                currentRoundScore = 0;
+            }
+
+            updateUI();
+            if (dartHistory.length === config.maxRounds * 3) setTimeout(showResults, 500);
+        }
+
+        function undo() {
+            if (dartHistory.length === 0) return;
+            const lastHit = dartHistory.pop();
+            
+            // Stats korrigieren, falls eine Aufnahme rückgängig gemacht wird
+            if (dartHistory.length % 3 === 2) {
+                // Wir müssen den Score der Aufnahme vor dem Undo wissen... 
+                // Einfachheitshalber berechnen wir die Stats beim Undo neu:
+                recalculateStats();
+            }
+            updateUI();
+        }
+
+        function recalculateStats() {
+            sessionStats = { s60: 0, s100: 0, s140: 0, s180: 0 };
+            for (let i = 0; i < Math.floor(dartHistory.length / 3); i++) {
+                let rScore = (dartHistory[i*3] + dartHistory[i*3+1] + dartHistory[i*3+2]) * config.target;
+                if (rScore >= 180) sessionStats.s180++;
+                else if (rScore >= 140) sessionStats.s140++;
+                else if (rScore >= 100) sessionStats.s100++;
+                else if (rScore >= 60) sessionStats.s60++;
+            }
+            // Aktuellen Teil-Score der laufenden Runde setzen
+            currentRoundScore = 0;
+            for (let i = Math.floor(dartHistory.length / 3) * 3; i < dartHistory.length; i++) {
+                currentRoundScore += (dartHistory[i] * config.target);
+            }
+        }
+
+        function updateUI() {
+            const count = dartHistory.length;
+            const score = dartHistory.reduce((a, b) => a + (b * config.target), 0);
+            const round = Math.min(config.maxRounds, Math.floor((count - 0.1) / 3) + 1);
+            
+            document.getElementById('ui-score').innerText = score;
+            document.getElementById('ui-round').innerText = Math.max(1, round);
+            
+            const dots = document.querySelectorAll('.dart-dot');
+            const currentDartInRound = count % 3;
+            dots.forEach((d, i) => {
+                d.className = (i < currentDartInRound || (currentDartInRound === 0 && count > 0 && i < 3 && false)) ? 'dart-dot used' : 'dart-dot';
+                // Kleiner Trick: Wenn 3 Darts geworfen, leuchten sie kurz alle, dann Reset
+                if (currentDartInRound === 0 && count > 0) d.className = 'dart-dot used';
+            });
+            
+            if (currentDartInRound === 0 && count > 0) {
+                setTimeout(() => {
+                    if (dartHistory.length % 3 === 0) dots.forEach(d => d.className = 'dart-dot');
+                }, 400);
+            }
+        }
+
+        function showResults() {
+            const totalScore = dartHistory.reduce((a, b) => a + (b * config.target), 0);
+            const ppr = (totalScore / config.maxRounds).toFixed(1);
+
+            document.getElementById('final-points').innerText = totalScore;
+            document.getElementById('res-stats').innerHTML = `
+                PPR: <b style="color:var(--accent)">${ppr}</b> | Ziel: ${config.target === 25 ? 'Bull' : config.target}<br>
+                100+: ${sessionStats.s100} | 140+: ${sessionStats.s140} | 180s: ${sessionStats.s180}
+            `;
+
+            saveGame(totalScore, ppr);
+            document.getElementById('finish-modal').style.display = 'flex';
+        }
+
+        function saveGame(score, ppr) {
+            let stats = JSON.parse(localStorage.getItem('dart_training_stats') || '{}');
+            if(!stats.hiscore) stats.hiscore = [];
+            
+            stats.hiscore.push({
+                date: new Date().toISOString(),
+                score: score,
+                ppr: ppr,
+                target: config.target,
+                s60: sessionStats.s60,
+                s100: sessionStats.s100,
+                s140: sessionStats.s140,
+                s180: sessionStats.s180
+            });
+            localStorage.setItem('dart_training_stats', JSON.stringify(stats));
+        }
+    </script>
+</body>
+</html>
